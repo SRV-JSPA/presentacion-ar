@@ -1,0 +1,336 @@
+/* Kit de la app: arma, en HTML, las pantallas reales de AR Tour Kaminaljuyú a tamaño nativo
+   (390×844 pt). Estilos en componentes/kit-app.css. Textos exactos de
+   LanguageModule/Content/LocalizedStrings.swift y VideoTranscripts.swift (ver notas/).
+
+     KitApp.telefono(KitApp.menu({ idioma: 'es' }), { estado: true })
+     KitApp.telefono(KitApp.camara() + KitApp.botonesRA({ siguiente: 'play', bloqueado: true }) +
+                     KitApp.recuadro({ modo: 'video', transcripcion: KitApp.GUIONES['datos-arqueologicos'], actual: 2 }))
+
+   Piezas (cada una devuelve HTML para ir dentro de la pantalla):
+     menu · controles · banner · camara · botonesRA · recuadro · mapa · ficha · regresar ·
+     proximamente · splash
+   Envolturas: pantalla(html, op) → .pantalla 390×844 con .app · telefono(html, op) → .telefono completo.
+   Movimiento: KitApp.reproductor(recuadroEl, cues, op) resalta la transcripción al ritmo del
+   observador real de 0,2 s (VirtualGuideModuleInterface.swift:616-619). */
+window.KitApp = (function () {
+  'use strict';
+
+  function I(n, c) { return window.Iconos ? Iconos.svg(n, c) : ''; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* Textos de la interfaz (LocalizedStrings.swift; ES 35-107, EN 111-182) */
+  var TEXTOS = {
+    es: {
+      bienvenida: 'Bienvenidos al<br>Parque Arqueológico', titulo: 'Kaminaljuyú', bienvenida3: '',
+      guiado: 'Tour Guiado', libre: 'Tour Libre', instrucciones: 'Instrucciones<br>de Uso', terminos: 'Términos y<br>Condiciones',
+      proximamente: 'Próximamente', proximamenteTexto: 'Esta función estará disponible en una próxima actualización.',
+      controles: 'Controles del Tour AR', controlesSub: 'Toca cualquier lugar para continuar',
+      camina: 'Camina al punto de partida', esperando: 'Esperando ubicación GPS…', distancia: 'Estás a {n}m del punto de partida',
+      listo: 'Listo para iniciar', listoSub: 'Toca cualquier lugar para arrancar el tour',
+      filas: [['arrow.uturn.backward', 'Regresar al menú principal'], ['info.circle', 'Ver información del POI cercano'],
+        ['play.fill', 'Iniciar recorrido<br>guiado automático'], ['forward.end.fill', 'Avanzar al siguiente punto<br>de interés'],
+        ['checkmark', 'Finalizar el recorrido guiado'], ['hand.tap.fill', 'Toca el recuadro para alternar<br>entre el video y el mapa']],
+      mapa: 'Mapa', video: 'Video', pista: 'Toca aquí para cambiar entre el video y el mapa',
+      regresar: '¿Regresar al menú?', regresarTexto: 'El recorrido actual se reiniciará.',
+      poi6: 'Montículo C-II-6', acropolis: 'Acrópolis (C-II-4)',
+      idle: 'Acércate a un montículo para ver el modelo AR', aviso: 'Estás a unos {n} metros de {poi}'
+    },
+    en: {
+      bienvenida: 'Welcome to', titulo: 'Kaminaljuyú', bienvenida3: 'Archaeological Park',
+      guiado: 'Guided Tour', libre: 'Free Tour', instrucciones: 'Instructions<br>for Use', terminos: 'Terms &amp;<br>Conditions',
+      proximamente: 'Coming Soon', proximamenteTexto: 'This feature will be available in a future update.',
+      controles: 'AR Tour Controls', controlesSub: 'Tap anywhere to continue',
+      camina: 'Walk to the starting point', esperando: 'Waiting for GPS location…', distancia: 'You are {n}m from the starting point',
+      listo: 'Ready to start', listoSub: 'Tap anywhere to start the tour',
+      filas: [['arrow.uturn.backward', 'Return to main menu'], ['info.circle', 'View nearby POI information'],
+        ['play.fill', 'Start automatic guided tour'], ['forward.end.fill', 'Advance to next point of interest'],
+        ['checkmark', 'Finish the guided tour'], ['hand.tap.fill', 'Tap the panel to switch between video and map']],
+      mapa: 'Map', video: 'Video', pista: 'Tap here to switch between video and map',
+      regresar: 'Return to menu?', regresarTexto: 'The current tour will be reset.',
+      poi6: 'Mound C-II-6', acropolis: 'Acropolis (C-II-4)',
+      idle: 'Get close to a mound to see the AR model', aviso: 'You are about {n} meters from {poi}'
+    }
+  };
+  function tx(idioma) { return TEXTOS[idioma === 'en' ? 'en' : 'es']; }
+
+  /* Transcripciones literales en español: [inicio s, fin s, texto] (VideoTranscripts.swift) */
+  var GUIONES = {
+    'datos-generales': [
+      [0, 7.4, 'Kaminaljuyú es un sitio que se ubica en el centro de las Tierras Altas Mayas y se estableció alrededor del Lago Miraflores.'],
+      [8.5, 18.38, 'Fue un centro de intercambio y comercio que controló las rutas de distribución de jade, obsidiana, sal, algodón, resinas y otros productos.']],
+    'datos-arqueologicos': [
+      [0, 7.52, 'Durante el periodo Clásico, 250 a 900 después de Cristo, estableció relaciones con el Altiplano'],
+      [7.52, 14.58, 'mexicano y las Tierras Bajas Mayas. La arquitectura del sitio fue principalmente de barro y destacó'],
+      [14.58, 22.28, 'por la presencia de templos, palacios, juegos de pelota y viviendas. En la época prehispánica,'],
+      [22.62, 28.48, 'tuvo una extensión de 5 kilómetros cuadrados y se conformó de más de 230 montículos,'],
+      [28.48, 35.4, 'la mayoría demolidos por la expansión urbana. En la actualidad se conservan 40 montículos,'],
+      [35.96, 41.38, 'nueve se resguardan en el Parque Arqueológico Kaminaljuyú y los restantes se encuentran'],
+      [41.38, 47.12, 'alrededor de viviendas, centros comerciales, escuelas, colonias, entre otros.']],
+    'indicacion-proximidad': [[0, 3.84, 'Te encuentras a pocos metros de un punto de interés, sigue avanzando.']],
+    'punto-de-interes': [[0, 1.7, '¿Has llegado a un punto de interés?'], [1.98, 5.34, 'Levanta tu teléfono para poder visualizar el punto de interés.']],
+    'c-ii-6': [
+      [0, 6.98, 'Montículo C II 6 Hallazgos. Clásico tardío, 575 a 900 d.C.'],
+      [7.86, 14, 'Depósito cerámico y construcción de tres rellenos, un canal, un piso, un apisonado,'],
+      [14.5, 19.28, 'una superficie formada por piedras tipo laja, canto rodado y pómez.'],
+      [20.1, 25.84, 'Preclásico tardío terminal, 100 a.C. a 250 d.C.'],
+      [25.84, 32.04, 'Depósito cerámico conformado por una vasija completa que pudo funcionar como ofrenda.']],
+    'acropolis-talud': [
+      [83.7, 90.1, 'es un estilo arquitectónico que consiste en una base inclinada que es el talud, y sobre este se'],
+      [90.1, 96.36, 'encuentra el tablero, el cual es un bloque rectangular con molduras. Esta técnica constructiva'],
+      [96.36, 102.5, 'es distintiva de Teotihuacán, México. La incorporación del estilo talud-tablero en'],
+      [102.5, 108.96, 'Kaminaljuyú fue una adaptación local, ya que se utilizaron recursos de la región como material de'],
+      [108.96, 115.24, 'origen volcánico y diferentes dimensiones. En Teotihuacán el tablero es tres veces más grande'],
+      [115.24, 123, 'que el talud, 3 a 1, mientras que en Kaminaljuyú el talud y tablero son del mismo tamaño, 1 a 1.']],
+    'despedida': [[0, 6.84, 'Ha sido para mí un gusto ser tu guía el día de hoy. Gracias por visitar el Parque Arqueológico Kaminaljuyú. Nos vemos en la próxima.']]
+  };
+
+  /* ── Envolturas ── */
+  function pantalla(html, op) {
+    op = op || {};
+    return '<div class="pantalla" data-ancho="390" data-alto="844"><div class="app' + (op.claseApp ? ' ' + op.claseApp : '') + '">' +
+      html + (op.estado ? '<div class="estado ' + (op.estadoOscuro ? 'estado--oscuro' : 'estado--claro') + '"></div>' : '') + '</div></div>';
+  }
+  function telefono(html, op) {
+    op = op || {};
+    return '<div class="telefono' + (op.plata ? ' telefono--plata' : '') + (op.sombraClara ? ' telefono--claro-sombra' : '') + (op.clase ? ' ' + op.clase : '') +
+      '" data-ui="oscura"' + (op.ancho ? ' style="--ancho:' + op.ancho + '"' : '') + '><div class="telefono__pantalla">' + pantalla(html, op) + '</div></div>';
+  }
+
+  /* ── Splash ── */
+  function splash() {
+    var g = '';
+    for (var i = 0; i < 8; i++) g += '<i style="transform:rotate(' + (i * 45) + 'deg);opacity:' + (.25 + i * .1).toFixed(2) + '"></i>';
+    return '<div class="app-splash"><p class="app-splash__ar">AR Tour</p><p class="app-splash__titulo">Kaminaljuyú</p>' +
+      '<span class="app-splash__barra"></span><span class="app-giratorio">' + g + '</span></div>';
+  }
+
+  /* ── Menú principal. op: idioma ('es'|'en') ── */
+  function menu(op) {
+    op = op || {};
+    var t = tx(op.idioma), en = op.idioma === 'en';
+    return '<div class="app-menu" data-idioma="' + (en ? 'en' : 'es') + '">' +
+      '<img class="app-menu__video" src="img/parque-menu.jpg" alt="">' +
+      '<svg class="app-menu__domo" viewBox="0 0 390 844" aria-hidden="true"><path d="M0 844V316.3A202.8 202.8 0 0 1 390 316.3V844Z" fill="#fff"/></svg>' +
+      '<img class="app-menu__guia" src="img/maya.png" alt="">' +
+      '<div class="app-idioma"><b class="' + (en ? '' : 'activo') + '" data-idioma="es">ES</b><i>|</i><b class="' + (en ? 'activo' : '') + '" data-idioma="en">EN</b></div>' +
+      '<div class="app-menu__contenido">' +
+        '<p class="app-menu__l1" data-texto="bienvenida">' + t.bienvenida + '</p>' +
+        '<p class="app-menu__titulo">' + t.titulo + '</p>' +
+        '<p class="app-menu__l3" data-texto="bienvenida3"' + (t.bienvenida3 ? '' : ' hidden') + '>' + t.bienvenida3 + '</p>' +
+        '<span class="app-barra"></span>' +
+        '<div class="app-tarjeta app-tarjeta--guiado"><span class="app-tarjeta__icono">' + Iconos.menu('guiado') + '</span>' +
+          '<span class="app-tarjeta__texto" data-texto="guiado">' + t.guiado + '</span><span class="app-tarjeta__play">' + I('play.fill') + '</span></div>' +
+        '<div class="app-tarjeta app-tarjeta--libre"><span class="app-tarjeta__icono">' + Iconos.menu('libre') + '</span>' +
+          '<span class="app-tarjeta__texto" data-texto="libre">' + t.libre + '</span><span class="app-tarjeta__play">' + I('play.fill') + '</span></div>' +
+        '<div class="app-cuadradas">' +
+          '<div class="app-cuadrada">' + Iconos.menu('instrucciones') + '<span data-texto="instrucciones">' + t.instrucciones + '</span></div>' +
+          '<div class="app-cuadrada">' + Iconos.menu('terminos') + '<span data-texto="terminos">' + t.terminos + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      (op.proximamente ? proximamente(op) : '') +
+    '</div>';
+  }
+  /* Cambia los textos de un menú ya dibujado (para voltear ES ↔ EN) */
+  function idiomaMenu(raiz, idioma) {
+    var t = tx(idioma);
+    raiz.querySelectorAll('[data-texto]').forEach(function (e) {
+      var k = e.getAttribute('data-texto');
+      e.innerHTML = t[k] || '';
+      if (k === 'bienvenida3') e.hidden = !t[k];
+    });
+    raiz.querySelectorAll('.app-idioma b').forEach(function (b) { b.classList.toggle('activo', b.getAttribute('data-idioma') === idioma); });
+  }
+
+  function proximamente(op) {
+    var t = tx(op && op.idioma);
+    return '<div class="app-modal"><div class="app-modal__velo"></div><div class="app-modal__tarjeta">' +
+      '<p class="app-modal__titulo">' + t.proximamente + '</p><p class="app-modal__texto">' + t.proximamenteTexto + '</p>' +
+      '<span class="app-modal__ok">OK</span></div></div>';
+  }
+  function regresar(op) {
+    var t = tx(op && op.idioma);
+    return '<div class="app-modal"><div class="app-modal__velo"></div><div class="app-modal__tarjeta">' +
+      '<p class="app-modal__titulo">' + t.regresar + '</p><p class="app-modal__texto">' + t.regresarTexto + '</p>' +
+      '<div class="app-modal__botones"><span class="app-circulo app-circulo--cancelar">' + I('xmark') + '</span>' +
+      '<span class="app-circulo app-circulo--ok">' + I('checkmark') + '</span></div></div></div>';
+  }
+
+  /* ── Cámara: una foto del parque, como si fuera lo que ve el teléfono ── */
+  function camara(op) {
+    op = op || {};
+    return '<div class="app-camara"><img src="' + (op.imagen || 'img/parque-menu.jpg') + '" alt=""></div>';
+  }
+
+  /* ── Botones de la capa RA. op: siguiente ('play' | 'siguiente' | 'fin'), bloqueado, info ── */
+  var ICONO_SIG = { play: 'play.fill', siguiente: 'forward.end.fill', fin: 'checkmark' };
+  function botonesRA(op) {
+    op = op || {};
+    return '<div class="app-ra__tarjeta app-ra__tarjeta--izq"><span class="app-ra__boton app-ra__boton--atras">' + I('arrow.uturn.left') + '</span></div>' +
+      '<div class="app-ra__tarjeta app-ra__tarjeta--der">' +
+        '<span class="app-ra__boton app-ra__boton--info"' + (op.info ? '' : ' hidden') + '>' + I('info') + '</span>' +
+        '<span class="app-ra__boton app-ra__boton--siguiente' + (op.bloqueado ? ' app-ra__boton--bloqueado' : '') + '" data-icono="' + (op.siguiente || 'play') + '">' +
+          I(ICONO_SIG[op.siguiente] || 'play.fill') + '</span>' +
+      '</div>';
+  }
+  /* Cambia el ícono o el bloqueo del botón Next ya dibujado */
+  function siguienteRA(raiz, estado, bloqueado) {
+    var b = raiz.querySelector('.app-ra__boton--siguiente');
+    if (!b) return;
+    if (estado && b.getAttribute('data-icono') !== estado) { b.innerHTML = I(ICONO_SIG[estado]); b.setAttribute('data-icono', estado); }
+    b.classList.toggle('app-ra__boton--bloqueado', !!bloqueado);
+  }
+
+  /* ── Banner del punto de partida. op: estado ('sin' | 'lejos' | 'listo'), metros, idioma ── */
+  function textoBanner(op) {
+    var t = tx(op.idioma);
+    if (op.estado === 'listo') return { clase: 'listo', icono: 'checkmark.circle.fill', titulo: t.listo, sub: t.listoSub };
+    return { clase: 'camina', icono: 'figure.walk', titulo: t.camina,
+      sub: op.estado === 'lejos' ? t.distancia.replace('{n}', Math.floor(op.metros == null ? 34 : op.metros)) : t.esperando };
+  }
+  function banner(op) {
+    op = op || {};
+    var b = textoBanner(op);
+    return '<div class="app-banner app-banner--' + b.clase + '">' + I(b.icono) +
+      '<div class="app-banner__textos"><p class="app-banner__titulo">' + b.titulo + '</p><p class="app-banner__sub">' + b.sub + '</p></div></div>';
+  }
+  function actualizarBanner(el, op) {
+    var b = textoBanner(op || {});
+    el.className = 'app-banner app-banner--' + b.clase;
+    var ic = el.querySelector('.icono'); if (ic) ic.outerHTML = I(b.icono);
+    el.querySelector('.app-banner__titulo').textContent = b.titulo;
+    el.querySelector('.app-banner__sub').textContent = b.sub;
+  }
+
+  /* ── Controles del tour (pantalla completa, sobre la capa RA atenuada). op: estado, metros, idioma ── */
+  function controles(op) {
+    op = op || {};
+    var t = tx(op.idioma), filas = '';
+    t.filas.forEach(function (f) { filas += '<div class="app-fila"><span class="app-fila__circulo">' + I(f[0]) + '</span><span>' + f[1] + '</span></div>'; });
+    return camara(op) + botonesRA({ siguiente: 'play', bloqueado: true }) +
+      '<div class="app-ctl"><div class="app-ctl__cab">' + I('gamecontroller.fill') +
+        '<div class="app-ctl__titulos"><p class="app-ctl__titulo">' + t.controles + '</p><p class="app-ctl__sub">' + t.controlesSub + '</p></div>' +
+        '<span class="app-ctl__cerrar">' + I('xmark') + '</span></div>' +
+      banner(op) + filas + '</div>';
+  }
+
+  /* ── Transcripción: lista de líneas, con la actual resaltada ── */
+  function transcripcion(cues, actual) {
+    var h = '';
+    (cues || []).forEach(function (c, i) {
+      h += '<p class="app-trans__l' + (i === actual ? ' app-trans__l--actual' : '') + '" data-i="' + i + '">' + esc(c[2]) + '</p>';
+    });
+    return '<div class="app-trans"><div class="app-trans__lista">' + h + '</div></div>';
+  }
+
+  /* ── Mapa (366×236 dentro del recuadro). op: destino, metros, estado ('navegando'|'llegada'|'idle'), rumbo (grados), idioma ── */
+  function pin(x, y, color, grande) {
+    var s = grande ? 1 : .72;
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+      '<path d="M0 0C-3.2-5.6-10-11.6-10-19.4A10 10 0 0 1 10-19.4C10-11.6 3.2-5.6 0 0Z" fill="' + color + '" stroke="#fff" stroke-width="2"/>' +
+      (grande ? '<circle cx="0" cy="-19.4" r="4.2" fill="#fff"/>' : '') + '</g>';
+  }
+  function mapa(op) {
+    op = op || {};
+    var t = tx(op.idioma), est = op.estado || 'navegando', destino = op.destino || t.poi6;
+    var icono = est === 'llegada' ? 'mappin.circle.fill' : est === 'idle' ? 'figure.walk' : 'location.north.fill';
+    var texto = est === 'idle' ? t.idle : (est === 'llegada' ? '' : '→ ') + destino;
+    var rumbo = op.rumbo == null ? -8 : op.rumbo;
+    /* Posiciones tomadas de la captura 12-tour-mapa (área de 366×205 pt) */
+    var svg = '<svg class="app-mapa__svg" viewBox="0 0 366 205" aria-hidden="true">' +
+      '<polyline points="184,107 218,126 279,158" fill="none" stroke="rgba(33,150,243,.85)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<g transform="translate(176 98)"><rect x="-1.4" y="-29" width="2.8" height="30" rx="1" fill="#fff"/>' +
+        '<path d="M1.4-28H19l-5 7 5 7H1.4Z" fill="var(--mapa-inicio)" stroke="#fff" stroke-width="1.2"/></g>' +
+      pin(279, 159, 'var(--mapa-pin)', false) + pin(218, 127, 'var(--mapa-objetivo)', true) +
+      '<g class="app-mapa__usuario" transform="translate(183 103) rotate(' + rumbo + ')"><path d="M0-14 11 12 0 6.5-11 12Z" fill="var(--mapa-usuario)" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></g>' +
+      '</svg>';
+    return '<div class="app-mapa"><div class="app-mapa__barra' + (est === 'llegada' ? ' app-mapa__barra--llegada' : '') + '">' + I(icono) +
+      '<span class="app-mapa__texto">' + esc(texto) + '</span>' + (op.metros != null ? '<span class="app-mapa__metros">' + Math.floor(op.metros) + 'm</span>' : '') +
+      '</div><div class="app-mapa__area">' + svg + '</div></div>';
+  }
+
+  /* ── Recuadro de la guía (366×236).
+     op: modo ('video'|'mapa'), guia (imagen), transcripcion (cues), actual, panel (true: abierto),
+         pista (aviso de la primera vez), plano (sin giro 3D), mapa (op del mapa), idioma, suelto (sin posición) ── */
+  function recuadro(op) {
+    op = op || {};
+    var t = tx(op.idioma), cues = op.transcripcion || null, panel = cues && op.panel !== false;
+    var botones = function (modo) {
+      return '<div class="app-recuadro__botones">' +
+        (cues ? '<span class="app-burbuja">' + I(panel && modo === 'video' ? 'text.bubble.fill' : 'text.bubble') + '</span>' : '') +
+        '<span class="app-capsula">' + (modo === 'video' ? I('map.fill') + t.mapa : I('play.rectangle.fill') + t.video) + '</span></div>';
+    };
+    var caraVideo = '<div class="app-recuadro__cara app-recuadro__cara--video">' +
+      (panel ? transcripcion(cues, op.actual == null ? 0 : op.actual) : '') +
+      '<div class="app-video"><img src="' + (op.guia || 'img/guia-datos-generales.png') + '" alt=""></div>' + botones('video') +
+      (op.pista ? '<div class="app-pista"><div class="app-pista__pildora"><span class="app-toque">' + I('hand.tap.fill') + '<i></i><i></i></span>' + t.pista + '</div></div>' : '') +
+      '</div>';
+    var caraMapa = '<div class="app-recuadro__cara app-recuadro__cara--mapa">' + mapa(Object.assign({ idioma: op.idioma }, op.mapa || {})) + botones('mapa') + '</div>';
+    var r = '<div class="app-recuadro' + (panel ? ' app-recuadro--transcripcion' : '') + (op.plano ? ' app-recuadro--plano' : '') + '" data-modo="' + (op.modo || 'video') + '">' +
+      '<div class="app-recuadro__giro">' + caraVideo + caraMapa + '</div></div>';
+    return op.suelto ? r : '<div class="app-recuadro-pos">' + r + '</div>';
+  }
+  function modoRecuadro(el, modo) {
+    var r = el.classList && el.classList.contains('app-recuadro') ? el : el.querySelector('.app-recuadro');
+    if (r) r.setAttribute('data-modo', modo);
+  }
+
+  /* ── Ficha del punto (hoja de iOS). op: titulo, imagen, texto, alto (px de la hoja), velo ── */
+  function ficha(op) {
+    op = op || {};
+    return (op.velo === false ? '' : '<div class="app-velo"></div>') +
+      '<div class="app-hoja" style="--alto-hoja:' + (op.alto || 430) + 'px"><span class="app-hoja__asa"></span><div class="app-hoja__contenido">' +
+      '<h3 class="app-hoja__titulo">' + esc(op.titulo || TEXTOS.es.acropolis) + '</h3>' +
+      (op.imagen === false ? '' : '<img class="app-hoja__foto" src="' + (op.imagen || 'img/c-ii-4.png') + '" alt="">') +
+      (op.texto ? '<p class="app-hoja__texto">' + esc(op.texto) + '</p>' : '') + '</div></div>';
+  }
+
+  /* ── Transcripción en movimiento ──────────────────────────────────────
+     Igual que la app: cada 0,2 s se busca la primera línea con inicio ≤ t < fin; en los huecos
+     no se resalta nada. La lista se desplaza para centrar la línea actual.
+       var r = KitApp.reproductor(recuadroEl, cues, { velocidad: 1, bucle: true, alCambio: fn(i, t) });
+       r.iniciar(); r.detener(); r.ir(segundos); r.linea(i)  */
+  function reproductor(raiz, cues, op) {
+    op = op || {};
+    var lista = raiz.querySelector('.app-trans__lista'), panel = raiz.querySelector('.app-trans');
+    var lineas = lista ? Array.prototype.slice.call(lista.children) : [];
+    var t = op.desde || 0, id = 0, actual = -2, vel = op.velocidad || 1, fin = cues.length ? cues[cues.length - 1][1] + (op.pausa == null ? 1.6 : op.pausa) : 0;
+    function indice(s) { for (var i = 0; i < cues.length; i++) if (cues[i][0] <= s && s < cues[i][1]) return i; return -1; }
+    function centrar(i) {
+      if (!lista || !panel) return;
+      var l = lineas[Math.max(0, i)]; if (!l) return;
+      var y = l.offsetTop + l.offsetHeight / 2, h = panel.offsetHeight;
+      var max = Math.max(0, lista.scrollHeight - h + 14);
+      var dy = Math.max(-14, Math.min(max, y - h / 2));
+      lista.style.transform = 'translateY(' + (-dy).toFixed(1) + 'px)';
+    }
+    function marcar(i) {
+      if (i === actual) return;
+      actual = i;
+      lineas.forEach(function (l, k) { l.classList.toggle('app-trans__l--actual', k === i); });
+      if (i >= 0) centrar(i);
+      if (op.alCambio) op.alCambio(i, t);
+    }
+    function tick() {
+      t += .2 * vel;
+      if (t > fin) { if (op.bucle === false) { detener(); return; } t = 0; }
+      marcar(indice(t));
+      if (op.alTiempo) op.alTiempo(t);
+    }
+    function iniciar() { detener(); marcar(indice(t)); id = setInterval(tick, 200); }
+    function detener() { if (id) clearInterval(id); id = 0; }
+    function ir(s) { t = s; marcar(indice(t)); if (op.alTiempo) op.alTiempo(t); }
+    function linea(i) { t = cues[i] ? cues[i][0] + .01 : 0; marcar(i); if (op.alTiempo) op.alTiempo(t); }
+    return { iniciar: iniciar, detener: detener, ir: ir, linea: linea, centrar: function () { if (actual >= 0) centrar(actual); },
+      get t() { return t; }, get actual() { return actual; }, get activo() { return !!id; } };
+  }
+
+  return {
+    TEXTOS: TEXTOS, GUIONES: GUIONES, textos: tx,
+    pantalla: pantalla, telefono: telefono,
+    splash: splash, menu: menu, idiomaMenu: idiomaMenu, proximamente: proximamente, regresar: regresar,
+    camara: camara, botonesRA: botonesRA, siguienteRA: siguienteRA,
+    banner: banner, actualizarBanner: actualizarBanner, controles: controles,
+    transcripcion: transcripcion, mapa: mapa, recuadro: recuadro, modoRecuadro: modoRecuadro, ficha: ficha,
+    reproductor: reproductor
+  };
+})();

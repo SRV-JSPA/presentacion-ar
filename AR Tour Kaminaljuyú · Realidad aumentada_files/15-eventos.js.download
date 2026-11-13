@@ -1,0 +1,267 @@
+/* 15 · Eventos — ink. Las tres vías con que se hablan los módulos (pantallas-arquitectura.md § B.2),
+   como tres carriles con partículas en un canvas:
+   · Comando: App (ContentView.swift:175) llama gps.startTour() en GPSModuleInterface: un paquete, una llamada.
+   · Evento: el módulo RA publica .nextPOIRequested (ARViewController.swift:363) en el EventBus; lo
+     escuchan GPS (advanceToNextPOI, GPSModuleInterface.swift:162-167) y la guía (clearQueueAndStop,
+     VirtualGuideModuleInterface.swift:232-235). Paso 1: se toca Next, el aviso llega al bus y se abre
+     en abanico a los dos oyentes (§ B.4).
+   · Estado: GPSModuleInterface publica @Published nearestPOI y la guía lo observa
+     (VirtualGuideModuleInterface.swift:220): no es un aviso, es un flujo que no se detiene. */
+(function () {
+  var el0 = null, lz = null, bucle = null, obs = null, paso = 0, relojes = [];
+  var P = null;            /* anclas medidas en px del lienzo */
+  var colores = {};
+  var disparo = -1;        /* tiempo (s) del último toque a Next; -1: sin aviso en curso */
+  var reloj = 0, ultimoComando = -10, recibido = false;
+
+  var CICLO_EVENTO = 4.6, CICLO_COMANDO = 3.4;
+
+  /* Posición de un elemento relativa a la caja de los carriles (inmune a las transformaciones 3D de la transición) */
+  function caja(e, raiz) {
+    var x = 0, y = 0, n = e;
+    while (n && n !== raiz) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+    return { x: x, y: y, w: e.offsetWidth, h: e.offsetHeight };
+  }
+  function der(b) { return [b.x + b.w, b.y + b.h / 2]; }
+  function izq(b) { return [b.x, b.y + b.h / 2]; }
+  function centro(b) { return [b.x + b.w / 2, b.y + b.h / 2]; }
+
+  function medir() {
+    if (!el0) return;
+    var raiz = el0.querySelector('.ev__carriles');
+    function q(s) { return caja(el0.querySelector(s), raiz); }
+    var bus = q('.ev__bus'), r = bus.w / 2;
+    var cb = centro(bus);
+    P = {
+      comando: [der(q('[data-n="c-de"]')), izq(q('[data-n="c-a"]'))],
+      ar: der(q('[data-n="e-de"]')), bus: cb, r: r,
+      gps: izq(q('[data-n="e-gps"]')), guia: izq(q('[data-n="e-guia"]')),
+      estado: [der(q('[data-n="s-de"]')), izq(q('[data-n="s-a"]'))]
+    };
+    P.busIn = [cb[0] - r, cb[1]];
+    P.busOut = [cb[0] + r, cb[1]];
+  }
+
+  function leerColores() {
+    var cs = getComputedStyle(el0);
+    colores.oro = cs.getPropertyValue('--oro').trim() || '#E6BA62';
+    colores.app = cs.getPropertyValue('--app').trim() || '#D15B33';
+    colores.crema = '#F3E9D6';
+  }
+
+  /* ── Geometría de los trayectos ── */
+  function recta(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+  function rama(a, b, t) {   /* curva en S del bus a cada oyente */
+    var mx = (a[0] + b[0]) / 2, u = 1 - t;
+    var p0 = a, p1 = [mx, a[1]], p2 = [mx, b[1]], p3 = b;
+    return [u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0],
+      u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]];
+  }
+  function trazarRama(c, a, b) {
+    var mx = (a[0] + b[0]) / 2;
+    c.moveTo(a[0], a[1]); c.bezierCurveTo(mx, a[1], mx, b[1], b[0], b[1]);
+  }
+  function suave(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function rgba(hex, a) {
+    var h = hex.replace('#', ''); if (h.length === 3) h = h.replace(/(.)/g, '$1$1');
+    return 'rgba(' + parseInt(h.slice(0, 2), 16) + ',' + parseInt(h.slice(2, 4), 16) + ',' + parseInt(h.slice(4, 6), 16) + ',' + a + ')';
+  }
+
+  function brillo(c, p, r, color, a) {
+    var g = c.createRadialGradient(p[0], p[1], 0, p[0], p[1], r);
+    g.addColorStop(0, rgba(color, a)); g.addColorStop(1, rgba(color, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(p[0], p[1], r, 0, Math.PI * 2); c.fill();
+  }
+  function paquete(c, fn, t, color, largo) {   /* cabeza brillante con estela */
+    for (var i = 8; i >= 0; i--) {
+      var tt = t - i * largo / 8; if (tt < 0) continue;
+      var p = fn(Math.min(1, tt)), a = (1 - i / 9) * .9;
+      c.fillStyle = rgba(color, a * (i ? .45 : 1));
+      c.beginPath(); c.arc(p[0], p[1], i ? 2.6 - i * .18 : 4.2, 0, Math.PI * 2); c.fill();
+    }
+    var cabeza = fn(Math.min(1, t));
+    brillo(c, cabeza, 16, color, .5);
+  }
+
+  /* ── Dibujo de un cuadro. t: segundos de escena ── */
+  function dibujar(t) {
+    if (!lz || !P) return;
+    var c = lz.ctx, quieto = Deck.quieto();
+    c.clearRect(0, 0, lz.ancho, lz.alto);
+    c.lineCap = 'round';
+
+    /* Comando: una llamada, un paquete terracota */
+    var A = P.comando[0], B = P.comando[1];
+    c.strokeStyle = rgba(colores.app, .5); c.lineWidth = 1.5; c.setLineDash([]);
+    c.beginPath(); c.moveTo(A[0], A[1]); c.lineTo(B[0] - 7, B[1]); c.stroke();
+    flecha(c, B, colores.app, .8);
+    var fc = function (s) { return recta(A, B, s); };
+    if (quieto) paquete(c, fc, .62, colores.app, .16);
+    else {
+      var tc = (t - ultimoComando) / 1.15;
+      if (tc >= 0 && tc <= 1.18) paquete(c, fc, suave(Math.min(1, tc)), colores.app, .16);
+    }
+
+    /* Evento: AR → EventBus → abanico a GPS y guía */
+    var activo = paso >= 1;
+    c.lineWidth = activo ? 1.6 : 1.2;
+    c.strokeStyle = rgba(colores.oro, activo ? .55 : .22);
+    c.setLineDash(activo ? [] : [3, 6]);
+    c.beginPath(); c.moveTo(P.ar[0], P.ar[1]); c.lineTo(P.busIn[0] - 4, P.busIn[1]); c.stroke();
+    c.beginPath(); trazarRama(c, P.busOut, [P.gps[0] - 7, P.gps[1]]); c.stroke();
+    c.beginPath(); trazarRama(c, P.busOut, [P.guia[0] - 7, P.guia[1]]); c.stroke();
+    c.setLineDash([]);
+    flecha(c, P.gps, colores.oro, activo ? .85 : .3);
+    flecha(c, P.guia, colores.oro, activo ? .85 : .3);
+    if (activo) {
+      var te;
+      if (quieto) te = 1.15;
+      else te = disparo < 0 ? -1 : t - disparo;
+      var f1 = function (s) { return recta(P.ar, P.busIn, s); };
+      if (te >= 0 && te < .75) paquete(c, f1, suave(te / .75), colores.oro, .2);
+      if (te >= .6 && te < 1.1) {   /* el bus recibe y se ilumina */
+        var k = (te - .6) / .5;
+        c.strokeStyle = rgba(colores.oro, .7 * (1 - k)); c.lineWidth = 2;
+        c.beginPath(); c.arc(P.bus[0], P.bus[1], P.r * (1 + k * .6), 0, Math.PI * 2); c.stroke();
+      }
+      if (te >= .8) {
+        var s = quieto ? .64 : (te - .8) / .9;
+        if (s <= 1.15) {
+          paquete(c, function (u) { return rama(P.busOut, P.gps, u); }, suave(Math.min(1, s)), colores.oro, .2);
+          paquete(c, function (u) { return rama(P.busOut, P.guia, u); }, suave(Math.min(1, s)), colores.oro, .2);
+        }
+      }
+    }
+
+    /* Estado: un flujo continuo, crema, que no se detiene */
+    var S0 = P.estado[0], S1 = P.estado[1], largo = S1[0] - S0[0] - 8;
+    c.strokeStyle = rgba(colores.crema, .16); c.lineWidth = 9;
+    c.beginPath(); c.moveTo(S0[0], S0[1]); c.lineTo(S1[0] - 8, S1[1]); c.stroke();
+    c.strokeStyle = rgba(colores.crema, .5); c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(S0[0], S0[1] - 7); c.lineTo(S1[0] - 8, S1[1] - 7); c.moveTo(S0[0], S0[1] + 7); c.lineTo(S1[0] - 8, S1[1] + 7); c.stroke();
+    flecha(c, S1, colores.crema, .7);
+    var N = Math.max(14, Math.round(largo / 22));
+    for (var i = 0; i < N; i++) {
+      var fase = (i / N + (quieto ? 0 : t * .16)) % 1;
+      var x = S0[0] + fase * largo, y = S0[1] + Math.sin(i * 2.7 + (quieto ? 0 : t * 2.2)) * 3.2;
+      var a = Math.min(1, fase * 6, (1 - fase) * 6);
+      c.fillStyle = rgba(colores.crema, .85 * a);
+      c.beginPath(); c.arc(x, y, i % 3 ? 1.8 : 2.6, 0, Math.PI * 2); c.fill();
+    }
+  }
+
+  function flecha(c, p, color, a) {
+    c.fillStyle = rgba(color, a);
+    c.beginPath(); c.moveTo(p[0] - 1, p[1]); c.lineTo(p[0] - 9, p[1] - 4.5); c.lineTo(p[0] - 9, p[1] + 4.5); c.closePath(); c.fill();
+  }
+
+  /* ── Disparos ── */
+  function tocarNext() {
+    disparo = reloj;
+    var b = el0.querySelector('.ev__next');
+    b.classList.remove('ev__next--toque'); void b.offsetWidth; b.classList.add('ev__next--toque');
+    relojes.push(setTimeout(function () { pulso('.ev__bus'); }, 600));
+    relojes.push(setTimeout(function () {
+      recibido = true; el0.classList.add('ev--recibido');
+      pulso('[data-n="e-gps"]'); pulso('[data-n="e-guia"]');
+    }, 1700));
+  }
+  function pulso(sel) {
+    var e = el0.querySelector(sel); if (!e) return;
+    e.classList.remove('ev__pulso'); void e.offsetWidth; e.classList.add('ev__pulso');
+  }
+
+  function cuadro(dt) {
+    reloj += dt;
+    if (reloj - ultimoComando > CICLO_COMANDO) {
+      ultimoComando = reloj;
+      relojes.push(setTimeout(function () { pulso('[data-n="c-a"]'); }, 1100));
+    }
+    if (paso >= 1 && (disparo < 0 || reloj - disparo > CICLO_EVENTO)) tocarNext();
+    dibujar(reloj);
+  }
+
+  function limpiar() {
+    relojes.forEach(clearTimeout); relojes = [];
+  }
+
+  function aplicarPaso(n, atras) {
+    paso = n;
+    limpiar();
+    if (n < 1) { disparo = -1; recibido = false; el0.classList.remove('ev--recibido'); }
+    else if (atras || Deck.quieto()) { recibido = true; el0.classList.add('ev--recibido'); disparo = -10; }
+    else { disparo = -1; }   /* el bucle toca Next en el siguiente cuadro */
+    el0.classList.toggle('ev--paso', n >= 1);
+    dibujar(reloj);
+  }
+
+  function nodo(id, titulo, codigo, clase) {
+    return '<span class="ev__nodo' + (clase ? ' ' + clase : '') + '" data-n="' + id + '"><b>' + titulo + '</b>' + (codigo ? '<code>' + codigo + '</code>' : '') + '</span>';
+  }
+
+  Presentacion.diapositiva({
+    id: 'eventos',
+    titulo: 'Cómo se comunican',
+    seccion: 'Ingeniería',
+    tema: 'ink',
+    transicion: 'pliegue',
+    resumen: 'Comandos, eventos y estado',
+    html: `
+      <div class="lienzo ev">
+        ${Deck.cabeza('Comunicación', 'Comandos, eventos y estado: tres vías.')}
+        <div class="ev__carriles">
+          <canvas class="ev__lienzo" aria-hidden="true" data-decorativo></canvas>
+
+          <div class="ev__carril ev__carril--comando">
+            <p class="ev__rot" data-anim="izquierda" style="--retraso:250ms"><span class="ev__tipo">Comando</span><code>gps.startTour()</code><small>Llamada directa a la interfaz</small></p>
+            <div class="ev__via" data-anim="aparecer" style="--retraso:300ms">
+              ${nodo('c-de', 'App', 'ContentView', 'ev__nodo--app')}
+              ${nodo('c-a', 'GPS', 'GPSModuleInterface')}
+            </div>
+          </div>
+
+          <div class="ev__carril ev__carril--evento">
+            <p class="ev__rot" data-anim="izquierda" style="--retraso:380ms"><span class="ev__tipo">Evento</span><code>.nextPOIRequested</code><small>Un aviso, dos oyentes</small></p>
+            <div class="ev__via ev__via--abanico" data-anim="aparecer" style="--retraso:420ms">
+              <span class="ev__nodo ev__nodo--ar" data-n="e-de">
+                <span class="ev__next" aria-hidden="true">${Iconos.svg('forward.end.fill')}</span>
+                <span class="ev__nodo-t"><b>Realidad aumentada</b><code>ARViewController</code></span>
+              </span>
+              <span class="ev__bus" aria-label="EventBus"><b>EventBus</b></span>
+              <span class="ev__oyentes">
+                <span class="ev__nodo ev__nodo--oyente" data-n="e-gps"><b>GPS<span class="ev__accion" data-paso="1">: avanza la ruta</span></b><code data-paso="1">advanceToNextPOI()</code></span>
+                <span class="ev__nodo ev__nodo--oyente" data-n="e-guia"><b>Guía<span class="ev__accion" data-paso="1">: limpia la cola</span></b><code data-paso="1">clearQueueAndStop()</code></span>
+              </span>
+            </div>
+          </div>
+
+          <div class="ev__carril ev__carril--estado">
+            <p class="ev__rot" data-anim="izquierda" style="--retraso:510ms"><span class="ev__tipo">Estado</span><code>@Published nearestPOI</code><small>Un flujo que se observa</small></p>
+            <div class="ev__via" data-anim="aparecer" style="--retraso:300ms">
+              ${nodo('s-de', 'GPS', '$nearestPOI')}
+              ${nodo('s-a', 'Guía virtual', 'VirtualGuideModuleInterface')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      leerColores();
+      if (!lz) {
+        lz = Deck.lienzo(el.querySelector('.ev__lienzo'), function () { medir(); dibujar(reloj); });
+        if (window.ResizeObserver) { obs = new ResizeObserver(function () { medir(); dibujar(reloj); }); obs.observe(el.querySelector('.ev__carriles')); }
+      }
+      lz.medir(); medir();
+      reloj = 0; ultimoComando = Deck.quieto() ? -10 : .5 - CICLO_COMANDO;
+      var n = Deck.paso();
+      aplicarPaso(n, true);
+      if (Deck.quieto()) { dibujar(0); return; }
+      if (!bucle) bucle = Deck.bucle(function (dt) { cuadro(dt); });
+      bucle.iniciar();
+      relojes.push(setTimeout(function () { medir(); }, 1100));   /* cuando termina la transición */
+    },
+    alPaso: function (el, n) { aplicarPaso(n, n < paso); },
+    alSalir: function () { if (bucle) bucle.detener(); limpiar(); }
+  });
+})();

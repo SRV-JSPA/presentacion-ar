@@ -1,0 +1,61 @@
+/* 05 · Menú — texto a la izquierda; el teléfono con el menú real a la derecha, con su lectura del idioma
+   arriba. Los textos del menú voltean en X (WAAPI en el .js); aquí, el toque en el selector. */
+.diapo[data-id="menu"] .menu{display:grid;grid-template-columns:minmax(0,50fr) minmax(0,50fr);align-items:center;gap:var(--e-5)}
+.diapo[data-id="menu"] .menu__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-5);position:relative;z-index:2}
+.diapo[data-id="menu"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*4)}
+.diapo[data-id="menu"] .menu__lista{gap:var(--e-2)}
+.diapo[data-id="menu"] .menu__lista>li{font-size:var(--t-lead)}
+.diapo[data-id="menu"] .menu__lista .k{font-size:.95em;font-weight:600;letter-spacing:.04em}
+.diapo[data-id="menu"] .menu__li-app::before{border-color:var(--app);box-shadow:0 0 0 .26em rgba(209,91,51,.16)}
+.diapo[data-id="menu"] .menu__li-libre{color:var(--texto-mute)}
+.diapo[data-id="menu"] .menu__li-libre b{color:var(--texto-2)}
+.diapo[data-id="menu"] .menu__li-libre::before{border-color:var(--texto-mute);box-shadow:none;border-style:dashed}
+/* el punto del idioma late cuando el menú cambia */
+.diapo[data-id="menu"] .menu__li-idioma::before{transition:background-color .4s,box-shadow .4s}
+.diapo[data-id="menu"].menu--en .menu__li-idioma::before{background:var(--oro);box-shadow:0 0 0 .3em rgba(230,186,98,.25),0 0 14px rgba(230,186,98,.55)}
+.diapo[data-id="menu"] .menu__nota{margin:0;padding-top:var(--e-3);border-top:1px solid var(--linea);font-size:var(--t-texto);color:var(--texto-2);max-width:40ch}
+
+/* Escena: el teléfono y su lectura */
+.diapo[data-id="menu"] .menu__escena{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:var(--e-3);
+  padding-left:var(--e-4);
+  height:var(--alto-util);--tel:min(calc(var(--u)*19.5),calc(var(--alto-util)*.445))}
+.diapo[data-id="menu"] .menu__telefono{--ancho:var(--tel)}
+/* La lectura del idioma, a la derecha del teléfono, unida al selector ES | EN con una traza */
+.diapo[data-id="menu"] .menu__hud{position:absolute;left:calc(100% + var(--u)*2.4);top:calc(var(--tel)*.31);translate:0 -50%;color:var(--texto-2);z-index:2}
+.diapo[data-id="menu"] .menu__hud::before{content:'';position:absolute;right:calc(100% + var(--u)*.8);top:50%;width:calc(var(--tel)*.17 + var(--u)*1.6);
+  height:1px;background:var(--oro);opacity:.7}
+.diapo[data-id="menu"] .menu__hud::after{content:'';position:absolute;right:calc(100% + var(--u)*.8 + var(--tel)*.17 + var(--u)*1.6 - 4px);top:50%;width:7px;height:7px;
+  margin-top:-3.5px;border-radius:50%;background:var(--oro);box-shadow:0 0 0 3px rgba(230,186,98,.25)}
+.diapo[data-id="menu"] .menu__hud>div+div{color:var(--texto-mute)}
+.diapo[data-id="menu"] .menu__idioma{display:inline-block;min-width:11ch;color:var(--oro)}
+/* un halo cálido detrás del teléfono */
+.diapo[data-id="menu"] .menu__telefono-caja{position:relative}
+.diapo[data-id="menu"] .menu__telefono-caja::before{content:'';position:absolute;left:-40%;right:-40%;top:5%;bottom:5%;z-index:-1;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(230,186,98,.12),transparent 75%)}
+
+/* Los textos que voltean: el giro va sobre su eje horizontal */
+.diapo[data-id="menu"] .app-menu [data-texto]{transform-origin:50% 55%;backface-visibility:hidden}
+/* El toque en el selector (como el indicador de la app) */
+.diapo[data-id="menu"] .app-idioma b{position:relative}
+.diapo[data-id="menu"] .menu__toque{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+  background:rgba(230,186,98,.35);border:2px solid rgba(244,216,146,.95);pointer-events:none;animation:menu-toque 1000ms var(--ease-expo) both}
+@keyframes menu-toque{0%{opacity:0;transform:scale(.4)}18%{opacity:1;transform:scale(.8)}35%{transform:scale(.7)}100%{opacity:0;transform:scale(1.8)}}
+
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="menu"] .menu__toque{display:none}
+}
+
+/* Vertical: titular, el teléfono completo y debajo la lista y la nota */
+@media (orientation:portrait){
+  .diapo[data-id="menu"] .menu{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="menu"] .menu__texto{display:contents}
+  .diapo[data-id="menu"] .cabeza{order:1}
+  .diapo[data-id="menu"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="menu"] .menu__escena{order:2;height:auto;--tel:min(64vw,380px);margin:var(--e-2) 0;padding-left:0;align-items:center}
+  .diapo[data-id="menu"] .menu__telefono-caja{display:flex;flex-direction:column;align-items:center;gap:var(--e-3)}
+  .diapo[data-id="menu"] .menu__hud{position:relative;left:auto;top:auto;translate:none;order:-1;align-self:center;text-align:center}
+  .diapo[data-id="menu"] .menu__hud::before,.diapo[data-id="menu"] .menu__hud::after{display:none}
+  .diapo[data-id="menu"] .menu__telefono-caja::before{left:-6%;right:-6%}
+  .diapo[data-id="menu"] .menu__lista{order:3}
+  .diapo[data-id="menu"] .menu__nota{order:4;max-width:none}
+}

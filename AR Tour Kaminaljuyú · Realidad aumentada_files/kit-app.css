@@ -1,0 +1,199 @@
+/* ═══════════════════════════════════════════════════════════════
+   Kit de la app: recrea las pantallas reales a tamaño nativo (390×844 pt)
+   dentro de .telefono .pantalla. Todo sale del código y de las capturas
+   del simulador (notas/investigacion/pantallas-arquitectura.md § A,
+   notas/app/*.png): hex, radios, tamaños y textos. Se arma con
+   componentes/kit-app.js (window.KitApp); guía en componentes/LEEME.md.
+   Las medidas van en px = puntos de iOS: el motor escala la pantalla.
+   ═══════════════════════════════════════════════════════════════ */
+
+.app{
+  /* Tokens de la app (literales Color(hex:) del código) */
+  --app-cacao:#1A1A1A; --app-grafito:#2D2D2D; --app-negro:#0F0F0F;
+  --app-terracota:#D15B33; --app-oro:#E6BA62; --app-crema:#ECEBC8;
+  --app-guiado:#E8C4A8; --app-borde:#C4714A; --app-cuadrada:#E5E5C8; --app-beige:#F5E6D3;
+  --ra-tarjeta:#F5EBD6; --ra-boton:#E8C294; --ra-icono:#BF611A;
+  --trans-actual:#D15C33;
+  --sis-amarillo:#FFD60A; --sis-verde:#30D158; --sis-naranja:#FF9F0A;
+  --mapa-fondo:#3B3E42; --mapa-usuario:#00C850; --mapa-inicio:#2E7D32; --mapa-objetivo:#FFD700;
+  --mapa-pin:#FF5032; --mapa-ruta:#2196F3;
+  --app-pjs:'Plus Jakarta Sans',system-ui,sans-serif;
+  --app-sis:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;
+  position:absolute;inset:0;overflow:hidden;background:#000;color:#fff;
+  font-family:var(--app-pjs);font-weight:700;line-height:1.25;letter-spacing:-.005em;
+  -webkit-font-smoothing:antialiased;text-align:left}
+.app *,.app *::before,.app *::after{box-sizing:border-box}
+.app p,.app h3{margin:0}
+.app img{max-width:none}
+.app .icono{display:block;width:1em;height:1em;flex:none}
+.app>.estado{position:absolute;left:0;right:0;top:0;z-index:30}
+/* Una pieza suelta (el recuadro solo, en su propia .pantalla) no lleva el fondo negro de la pantalla */
+.app--suelta{background:transparent;overflow:visible}
+
+/* ═══ SPLASH (SplashView) ═══ */
+.app-splash{position:absolute;inset:0;background:var(--app-cacao);display:flex;flex-direction:column;
+  align-items:center;justify-content:center}
+.app-splash__ar{font-size:18px;color:var(--app-crema)}
+.app-splash__titulo{font-size:40px;color:var(--app-terracota);margin-top:4px;letter-spacing:-.01em}
+.app-splash__barra{width:60px;height:3px;background:var(--app-oro);margin:8px 0 32px}
+.app-giratorio{position:relative;width:24px;height:24px}
+.app-giratorio i{position:absolute;left:10.6px;top:0;width:2.8px;height:7px;border-radius:2px;background:var(--app-oro);
+  transform-origin:1.4px 12px}
+
+/* ═══ MENÚ PRINCIPAL (MainMenuView) ═══ */
+.app-menu{position:absolute;inset:0;background:linear-gradient(to bottom left,var(--app-cacao),var(--app-grafito),var(--app-negro))}
+.app-menu__video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.4}
+.app-menu__domo{position:absolute;left:0;top:0;width:390px;height:844px}
+.app-menu__guia{position:absolute;left:50%;top:47px;height:152.6px;width:auto;transform:translateX(-50%)}
+.app-idioma{position:absolute;right:20px;top:103px;display:flex;align-items:center;gap:8px;font-size:18px;z-index:2}
+.app-idioma b{font-weight:700;color:rgba(236,235,200,.5);transition:color .2s}
+.app-idioma b.activo{color:var(--app-terracota)}
+.app-idioma i{font-style:normal;font-family:var(--app-sis);font-weight:400;color:rgba(236,235,200,.3)}
+.app-menu__contenido{position:absolute;left:20px;right:20px;top:298.6px;display:flex;flex-direction:column;align-items:stretch}
+.app-menu__l1{font-size:22px;color:var(--app-grafito);line-height:29px;margin-bottom:2px}
+.app-menu__titulo{font-size:32px;color:var(--app-terracota);line-height:40px}
+.app-menu__l3{font-size:22px;color:var(--app-grafito);line-height:29px;margin-bottom:2px}
+.app-barra{display:block;width:60px;height:3px;background:var(--app-oro);margin:4px 0 24px}
+.app-tarjeta{display:flex;align-items:center;gap:16px;height:72px;padding:0 20px;margin-bottom:10px;border-radius:25px;
+  border:1px solid var(--app-borde);color:#000;font-size:18px;line-height:22px}
+.app-tarjeta--guiado{background:var(--app-guiado)}
+.app-tarjeta--libre{background:var(--app-oro)}
+.app-tarjeta__icono{width:40px;height:40px;display:grid;place-items:center;flex:none}
+.app-tarjeta__icono .icono{width:28px;height:28px}
+.app-tarjeta__texto{flex:1;min-width:0}
+.app-tarjeta__play{font-size:14px;color:rgba(0,0,0,.7)}
+.app-cuadradas{display:flex;gap:10px}
+.app-cuadrada{flex:1;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;
+  border-radius:25px;background:var(--app-cuadrada);border:1px solid var(--app-oro);color:#000;font-size:14px;line-height:17px;text-align:center}
+.app-cuadrada .icono{width:28px;height:28px}
+
+/* Modal «Próximamente» y «¿Regresar al menú?» (ComingSoonView, BackConfirmationView) */
+.app-modal{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:0 40px}
+.app-modal__velo{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.app-modal__tarjeta{position:relative;width:100%;padding:24px;border-radius:20px;background:rgba(0,0,0,.75);
+  display:flex;flex-direction:column;align-items:center;gap:20px;text-align:center}
+.app-modal__titulo{font-size:20px;line-height:25px;color:#fff}
+.app-modal__texto{font-family:var(--app-sis);font-weight:400;font-size:15px;line-height:20px;color:rgba(255,255,255,.85)}
+.app-modal__botones{display:flex;gap:20px;margin-top:4px}
+.app-modal__ok{display:grid;place-items:center;width:100px;height:44px;border-radius:22px;background:var(--app-terracota);font-size:16px;margin-top:4px}
+.app-circulo{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;color:#fff;font-size:24px}
+.app-circulo--cancelar{background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.5)}
+.app-circulo--ok{background:var(--app-terracota)}
+
+/* ═══ CAPA DE REALIDAD AUMENTADA (ARViewController) ═══ */
+/* La cámara: una foto del parque a pantalla completa (sin elementos inventados) */
+.app-camara{position:absolute;inset:0;overflow:hidden;background:#2a2f25}
+.app-camara img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.app-camara::after{content:'';position:absolute;inset:0;background:radial-gradient(130% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.28))}
+/* Tarjetas crema de las esquinas, con botones canela de 56 pt */
+.app-ra__tarjeta{position:absolute;top:59px;width:80px;padding:12px;border-radius:20px;background:rgba(245,235,214,.95);
+  box-shadow:0 3px 6px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:12px;z-index:3}
+.app-ra__tarjeta--izq{left:16px}
+.app-ra__tarjeta--der{right:16px}
+.app-ra__boton{display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:var(--ra-boton);
+  border:2.5px solid rgba(191,97,26,.6);color:var(--ra-icono);font-size:26px;transition:opacity .35s}
+.app-ra__boton--bloqueado{opacity:.4}
+.app-ra__boton[hidden]{display:none}
+
+/* ═══ CONTROLES DEL TOUR (TourControlsView) ═══ */
+.app-ctl{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:16px}
+.app-ctl::before{content:'';position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:-1}
+.app-ctl__cab{display:flex;align-items:center;gap:12px;padding:16px;border-radius:16px;background:rgba(255,255,255,.1)}
+.app-ctl__cab>.icono{font-size:30px}
+.app-ctl__titulos{flex:1;min-width:0}
+.app-ctl__titulo{font-size:18px;line-height:23px}
+.app-ctl__sub{font-family:var(--app-sis);font-weight:400;font-size:13px;line-height:17px;color:rgba(255,255,255,.8)}
+.app-ctl__cerrar{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--app-terracota);font-size:20px;flex:none}
+.app-banner{display:flex;align-items:center;gap:12px;padding:16px;border-radius:16px;border:1px solid;
+  transition:background-color .5s,border-color .5s}
+.app-banner>.icono{font-size:24px;transition:color .5s}
+.app-banner__textos{display:flex;flex-direction:column;gap:2px;min-width:0}
+.app-banner__titulo{font-size:15px;line-height:19px}
+.app-banner__sub{font-family:var(--app-sis);font-weight:400;font-size:13px;line-height:17px;color:rgba(255,255,255,.85)}
+.app-banner--camina{background:rgba(255,214,10,.15);border-color:rgba(255,214,10,.6)}
+.app-banner--camina>.icono{color:var(--sis-amarillo)}
+.app-banner--listo{background:rgba(48,209,88,.2);border-color:var(--sis-verde)}
+.app-banner--listo>.icono{color:var(--sis-verde)}
+.app-fila{display:flex;align-items:center;gap:16px;padding:16px;border-radius:16px;background:rgba(255,255,255,.1);font-size:16px;line-height:20px}
+.app-fila__circulo{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--app-beige);
+  border:2px solid var(--app-terracota);color:var(--app-terracota);font-size:21px;flex:none}
+
+/* ═══ RECUADRO DE LA GUÍA (GuidedTourOverlay, VirtualGuideView, MapOverlayView) ═══
+   28 % del alto (236 pt en 844), 12 pt a los lados, 24 pt sobre el área segura inferior. */
+.app-recuadro-pos{position:absolute;left:12px;right:12px;bottom:58px;height:236.3px;z-index:4}
+.app-recuadro{position:absolute;inset:0;border-radius:16px;box-shadow:0 0 8px rgba(0,0,0,.33);perspective:900px}
+.app-recuadro__giro{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.3,.7,.2,1)}
+.app-recuadro[data-modo="mapa"] .app-recuadro__giro{transform:rotateX(180deg)}
+.app-recuadro__cara{position:absolute;inset:0;border-radius:16px;overflow:hidden;background:#000;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden}
+.app-recuadro__cara--mapa{transform:rotateX(180deg)}
+/* Sin giro 3D (otras diapositivas): una sola cara visible */
+.app-recuadro--plano .app-recuadro__giro{transform:none!important;transition:none}
+.app-recuadro--plano .app-recuadro__cara--mapa{transform:none;display:none}
+.app-recuadro--plano[data-modo="mapa"] .app-recuadro__cara--mapa{display:block}
+.app-recuadro--plano[data-modo="mapa"] .app-recuadro__cara--video{display:none}
+/* Botones arriba a la derecha: transcripción (36 pt) y cápsula Mapa/Video */
+.app-recuadro__botones{position:absolute;top:10px;right:10px;z-index:3;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.app-burbuja{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.4);font-size:18px;color:#fff}
+.app-capsula{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:18px;background:rgba(0,0,0,.6);
+  border:1px solid rgba(255,255,255,.4);font-size:12px;color:#fff}
+.app-capsula .icono{font-size:15px}
+/* Video de la guía (canal alfa sobre negro, resizeAspect) */
+.app-video{position:absolute;top:0;bottom:0;right:0;left:0;display:flex;justify-content:center}
+.app-video img{height:100%;width:auto}
+.app-recuadro--transcripcion .app-video{left:45%}
+/* Panel de transcripción: 45 % del ancho, negro 92 %, línea actual 13 pt bold terracota */
+.app-trans{position:absolute;left:0;top:0;bottom:0;width:45%;background:rgba(0,0,0,.92);overflow:hidden;z-index:2}
+.app-trans__lista{position:absolute;left:0;right:0;top:0;padding:0 10px;display:flex;flex-direction:column;gap:10px;
+  transition:transform .3s ease}
+.app-trans__l{font-family:var(--app-sis);font-weight:400;font-size:11px;line-height:13.5px;color:rgba(255,255,255,.55);
+  transition:color .2s,font-size .2s,line-height .2s;letter-spacing:0}
+.app-trans__l--actual{font-weight:700;font-size:13px;line-height:16px;color:var(--trans-actual)}
+/* Aviso de la primera vez: «Toca aquí…» (VideoMapToggleHintView) */
+.app-pista{position:absolute;inset:0;z-index:2;border-radius:16px;overflow:hidden;pointer-events:none;
+  background:linear-gradient(transparent 50%,rgba(0,0,0,.5));display:flex;align-items:flex-end;padding:0 14px 12px}
+.app-pista__pildora{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;border-radius:14px;background:rgba(0,0,0,.78);
+  border:1.5px solid var(--app-terracota);font-size:12px;line-height:15px;letter-spacing:-.01em;white-space:nowrap}
+.app-toque{position:relative;width:34px;height:34px;display:grid;place-items:center;color:var(--app-beige);flex:none}
+.app-toque .icono{font-size:19px;position:relative;z-index:1}
+.app-toque i{position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(245,230,211,.8);opacity:0;
+  animation:app-onda 1.6s ease-out infinite}
+.app-toque i+i{animation-delay:.8s}
+.app-toque .icono{animation:app-pulso .8s ease-in-out infinite alternate}
+@keyframes app-onda{from{opacity:.9;transform:scale(.6)}to{opacity:0;transform:scale(1.7)}}
+@keyframes app-pulso{from{transform:scale(1)}to{transform:scale(.88)}}
+.app-giratorio{animation:app-girar 1s steps(8) infinite}
+@keyframes app-girar{to{transform:rotate(360deg)}}
+
+/* ═══ MAPA (MapOverlayView + MapViewRepresentable) ═══ */
+.app-mapa{position:absolute;inset:0;background:#000;display:flex;flex-direction:column}
+.app-mapa__barra{display:flex;align-items:center;gap:8px;height:30.8px;padding:6px 12px;background:rgba(0,0,0,.95);flex:none;
+  font-family:var(--app-sis);font-weight:400;font-size:12px;color:#fff;white-space:nowrap}
+.app-mapa__barra .icono{font-size:16px}
+.app-mapa__texto{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.app-mapa__metros{font-size:11px;color:rgba(235,235,245,.6)}
+.app-mapa__barra--llegada .icono{color:var(--sis-verde)}
+.app-mapa__barra--aviso{color:var(--sis-naranja)}
+.app-mapa__area{position:relative;flex:1;background:var(--mapa-fondo);overflow:hidden}
+.app-mapa__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+
+/* ═══ FICHA DEL PUNTO (hoja de iOS, modo oscuro) ═══ */
+.app-velo{position:absolute;inset:0;background:rgba(0,0,0,.25);z-index:15}
+.app-hoja{position:absolute;left:0;right:0;bottom:0;height:var(--alto-hoja,430px);z-index:16;border-radius:20px 20px 0 0;
+  background:#1C1C1E;overflow:hidden;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+.app-hoja__asa{position:absolute;left:50%;top:5px;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(235,235,245,.3)}
+.app-hoja__contenido{padding:24px 20px 20px;display:flex;flex-direction:column;gap:16px}
+.app-hoja__titulo{font-family:var(--app-sis);font-weight:700;font-size:22px;line-height:28px;color:#fff}
+.app-hoja__foto{display:block;width:100%;height:auto;border-radius:12px;background:#fff}
+.app-hoja__texto{font-family:var(--app-sis);font-weight:400;font-size:16px;line-height:21px;color:rgba(235,235,245,.6)}
+
+/* Con movimiento reducido o en capturas, el kit no anima nada */
+@media (prefers-reduced-motion:reduce){
+  .app-recuadro__giro,.app-trans__lista,.app-trans__l,.app-ra__boton,.app-banner{transition:none!important}
+  .app-toque i,.app-toque .icono,.app-giratorio{animation:none}
+  .app-toque i:first-of-type{opacity:.5;transform:scale(1.2)}
+}
+.modo-captura .app *{transition:none!important}
+.modo-captura .app-toque i,.modo-captura .app-toque .icono,.modo-captura .app-giratorio{animation:none}
+.modo-captura .app-toque i:first-of-type{opacity:.5;transform:scale(1.2)}

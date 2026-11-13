@@ -1,0 +1,1416 @@
+/* ═══════════════════════════════════════════════════════════════
+   Motor de presentaciones
+   Sin dependencias. Funciona desde file:// y desde cualquier hosting.
+
+   API pública (window.Presentacion):
+     diapositiva({id, titulo, seccion, tema, resumen, html, alEntrar, alSalir, alPaso})
+     iniciar({titulo, subtitulo})
+     ir(n | id) · siguiente() · anterior() · actual()
+     Evento: 'presentacion:cambio' en document → detail {indice, id, direccion}
+             'presentacion:paso'   en document → detail {indice, id, paso}
+   Vocabulario completo en motor/LEEME.md.
+   ═══════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  var D = document, W = window;
+  var registro = [];
+  var ids = {};
+  var opcionesInicio = {};
+  var iniciada = false;
+
+  // Elementos
+  var raiz, fondo, escenario, barra, indiceEl, vivo, diapos = [];
+  var refsBarra = {};
+  var tarjetasIndice = [];
+
+  // Estado
+  var estado = { indice: -1, paso: 0, indiceAbierto: false, direccion: 'adelante' };
+  var animaciones = [];        // animaciones WAAPI en curso
+  var temporizadorSalida = null;
+  var focoAntesIndice = null;
+  var erroresRender = {};      // indice → [mensajes]
+
+  // Errores de scripts (por ejemplo, una diapositiva que no llegó a registrarse)
+  var erroresGlobales = [];
+  W.addEventListener('error', function (e) {
+    if (!e || !e.message) return;
+    var archivo = (e.filename || '').split('/').slice(-2).join('/');
+    erroresGlobales.push(e.message + (archivo ? ' (' + archivo + ':' + e.lineno + ')' : ''));
+  });
+
+  var modos = leerModos();
+  var mqReducido = W.matchMedia ? W.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  var mqTactil = W.matchMedia ? W.matchMedia('(hover: none) and (pointer: coarse)') : { matches: false };
+
+  function leerModos() {
+    var q = {};
+    try { new URLSearchParams(location.search).forEach(function (v, k) { q[k] = v; }); } catch (e) {}
+    var qa = 'qa' in q;
+    return {
+      captura: 'captura' in q || qa,
+      qa: qa,
+      autoprueba: 'autoprueba' in q,
+      sinBarra: 'sinbarra' in q
+    };
+  }
+  function movimientoReducido() { return !!mqReducido.matches; }
+  function sinAnimar() { return modos.captura || modos.autoprueba; }
+
+  function registrarError(i, donde, err) {
+    var msg = donde + ': ' + (err && err.message ? err.message : String(err));
+    (erroresRender[i] = erroresRender[i] || []).push(msg);
+    try { console.error('[Presentación] Diapositiva ' + (i + 1) + ' (' + (registro[i] && registro[i].id) + ') · ' + msg, err); } catch (e) {}
+  }
+  function seguro(i, donde, fn) {
+    try { return fn(); } catch (err) { registrarError(i, donde, err); }
+  }
+  function dosDigitos(n) { return (n < 10 ? '0' : '') + n; }
+  function escapar(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function el(tag, clase, attrs) {
+    var e = D.createElement(tag);
+    if (clase) e.className = clase;
+    if (attrs) for (var k in attrs) if (attrs[k] != null) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function msDe(valor) {
+    if (!valor) return 0;
+    valor = String(valor).trim();
+    var n = parseFloat(valor);
+    if (isNaN(n)) return 0;
+    return /ms$/.test(valor) ? n : (/s$/.test(valor) ? n * 1000 : n);
+  }
+
+  // ── Íconos (24×24, trazo 1.5) ─────────────────────────────
+  var ICONOS = {
+    anterior: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5 9 12l5.5 5.5"/></svg>',
+    siguiente: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5 15 12l-5.5 5.5"/></svg>',
+    indice: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.5" y="4.5" width="6" height="6" rx="1.5"/><rect x="13.5" y="4.5" width="6" height="6" rx="1.5"/><rect x="4.5" y="13.5" width="6" height="6" rx="1.5"/><rect x="13.5" y="13.5" width="6" height="6" rx="1.5"/></svg>',
+    pantalla: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 9V5.5a1 1 0 0 1 1-1H9M15 4.5h3.5a1 1 0 0 1 1 1V9M19.5 15v3.5a1 1 0 0 1-1 1H15M9 19.5H5.5a1 1 0 0 1-1-1V15"/></svg>',
+    salirPantalla: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4.5V8a1 1 0 0 1-1 1H4.5M19.5 9H16a1 1 0 0 1-1-1V4.5M15 19.5V16a1 1 0 0 1 1-1h3.5M4.5 15H8a1 1 0 0 1 1 1v3.5"/></svg>',
+    cerrar: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>'
+  };
+  var ICONOS_ESTADO = {
+    senal: '<svg viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg>',
+    wifi: '<svg viewBox="0 0 16 12" aria-hidden="true"><path d="M8 2.2c2.4 0 4.6.9 6.3 2.5l1.2-1.3A10.6 10.6 0 0 0 8 .4C5.2.4 2.5 1.5.5 3.4l1.2 1.3A9 9 0 0 1 8 2.2Zm0 3.6c1.4 0 2.7.5 3.7 1.4l1.2-1.3A7.3 7.3 0 0 0 8 4c-1.8 0-3.6.7-4.9 1.9l1.2 1.3c1-.9 2.3-1.4 3.7-1.4Zm0 3.5c-.6 0-1.2.2-1.6.6L8 11.6l1.6-1.7c-.4-.4-1-.6-1.6-.6Z"/></svg>',
+    bateria: '<svg viewBox="0 0 27 13" aria-hidden="true"><rect x=".5" y=".5" width="22" height="12" rx="3.6" fill="none" stroke="currentColor" opacity=".4"/><rect x="2.2" y="2.2" width="18.6" height="8.6" rx="2.2"/><path d="M24.2 4.4v4.2c.8-.3 1.4-1.1 1.4-2.1s-.6-1.8-1.4-2.1Z" opacity=".45"/></svg>'
+  };
+
+  // ═══ Registro ═══════════════════════════════════════════════
+  function diapositiva(def) {
+    if (!def || !def.id) { console.error('[Presentación] Falta el id de una diapositiva', def); return; }
+    if (iniciada) { console.error('[Presentación] diapositiva("' + def.id + '") se llamó después de iniciar(); se ignora.'); return; }
+    if (ids[def.id]) { console.error('[Presentación] id repetido: ' + def.id); return; }
+    ids[def.id] = true;
+    registro.push({
+      id: String(def.id),
+      titulo: def.titulo || def.id,
+      seccion: def.seccion || '',
+      tema: def.tema === 'bone' ? 'bone' : 'ink',
+      resumen: def.resumen || '',
+      html: def.html,
+      alEntrar: def.alEntrar, alSalir: def.alSalir, alPaso: def.alPaso,
+      transicion: def.transicion || '',
+      _pasos: 0
+    });
+  }
+
+  // ═══ Construcción ═══════════════════════════════════════════
+  function iniciar(opciones) {
+    if (iniciada) return;
+    iniciada = true;
+    opcionesInicio = opciones || {};
+    var html = D.documentElement;
+    if (modos.captura) html.classList.add('modo-captura');
+    if (modos.captura || modos.autoprueba) html.classList.add('modo-sintransicion');
+    if (modos.sinBarra) html.classList.add('modo-sinbarra');
+    if (modos.qa) html.classList.add('modo-qa');
+
+    raiz = D.getElementById('presentacion');
+    if (!raiz) { raiz = el('div', '', { id: 'presentacion' }); D.body.appendChild(raiz); }
+    raiz.classList.add('presentacion');
+    raiz.innerHTML = '';
+
+    construirFondo();
+    construirEscenario();
+    construirBarra();
+    construirIndice();
+    vivo = el('div', 'vivo', { 'aria-live': 'polite', 'aria-atomic': 'true' });
+    raiz.appendChild(vivo);
+    raiz.appendChild(el('div', 'grano', { 'aria-hidden': 'true' }));
+
+    if (opcionesInicio.titulo && !D.title) D.title = opcionesInicio.titulo;
+
+    prepararPantallas(raiz);
+    instalarEventos();
+
+    var inicial = leerHash();
+    mostrar(inicial == null ? 0 : inicial, 'adelante', { instantaneo: true, inicial: true });
+
+    if (D.fonts && D.fonts.ready) D.fonts.ready.then(recalcularPantallas);
+    W.addEventListener('load', recalcularPantallas);
+    // Al imprimir, la hoja mide lo mismo que la ventana: el diseño no se reacomoda
+    // y las pantallas nativas conservan su escala. El diálogo ajusta al papel.
+    var estiloPagina = el('style', '', { id: 'prs-pagina' });
+    D.head.appendChild(estiloPagina);
+    var medirPagina = function () {
+      estiloPagina.textContent = '@page{size:' + W.innerWidth + 'px ' + W.innerHeight + 'px;margin:0}';
+    };
+    medirPagina();
+    W.addEventListener('resize', medirPagina);
+    W.addEventListener('beforeprint', medirPagina);
+
+    if (modos.qa) alCargar(ejecutarQA);
+    if (modos.autoprueba) alCargar(ejecutarAutoprueba);
+  }
+
+  function alCargar(fn) {
+    var correr = function () {
+      var listo = D.fonts && D.fonts.ready ? D.fonts.ready : Promise.resolve();
+      listo.then(function () { setTimeout(fn, 60); });
+    };
+    if (D.readyState === 'complete') correr(); else W.addEventListener('load', correr);
+  }
+
+  function construirFondo() {
+    fondo = el('div', 'fondo', { 'aria-hidden': 'true' });
+    fondo.innerHTML = '<div class="fondo__revelado"></div><div class="fondo__cielo"></div>' +
+      '<div class="fondo__brillo fondo__brillo--ink"></div><div class="fondo__brillo fondo__brillo--bone"></div>' +
+      '<div class="fondo__suelo"></div><div class="fondo__horizonte"></div>';
+    raiz.appendChild(fondo);
+  }
+
+  function construirEscenario() {
+    escenario = el('main', 'escenario', { 'aria-roledescription': 'presentación', 'aria-label': opcionesInicio.titulo || 'Presentación' });
+    raiz.appendChild(escenario);
+    var total = registro.length;
+    registro.forEach(function (def, i) {
+      var s = el('section', 'diapo', {
+        'data-id': def.id, 'data-tema': def.tema, 'data-seccion': def.seccion, id: 'diapo-' + def.id,
+        'aria-roledescription': 'diapositiva',
+        'aria-label': (i + 1) + ' de ' + total + ': ' + def.titulo
+      });
+      var c = el('div', 'diapo__contenido');
+      s.appendChild(c);
+      try {
+        var h = typeof def.html === 'function' ? def.html() : def.html;
+        c.innerHTML = h == null ? '' : h;
+      } catch (err) {
+        registrarError(i, 'html', err);
+        c.innerHTML = modos.qa ? '<div class="aviso-error">Error al construir «' + escapar(def.id) + '»: ' + escapar(err.message) + '</div>' : '';
+      }
+      seguro(i, 'preparar', function () { prepararDiapo(s, def); });
+      s.setAttribute('inert', '');
+      s.setAttribute('aria-hidden', 'true');
+      escenario.appendChild(s);
+      diapos.push(s);
+    });
+  }
+
+  function prepararDiapo(s, def) {
+    // Grupos con escalonado automático
+    s.querySelectorAll('[data-anim-grupo]').forEach(function (g) {
+      var tipo = g.getAttribute('data-anim-grupo') || 'subir';
+      var base = msDe(g.style.getPropertyValue('--retraso'));
+      var paso = parseFloat(g.getAttribute('data-intervalo')) || 80;
+      var i = 0;
+      Array.prototype.forEach.call(g.children, function (h) {
+        if (!h.hasAttribute('data-anim')) h.setAttribute('data-anim', tipo);
+        if (!h.style.getPropertyValue('--retraso')) h.style.setProperty('--retraso', (base + i * paso) + 'ms');
+        i++;
+      });
+      g.style.removeProperty('--retraso');
+    });
+    // Trazos que se dibujan
+    s.querySelectorAll('[data-anim="dibujar"]').forEach(function (d) {
+      var formas = /^(path|line|polyline|polygon|circle|ellipse|rect)$/i.test(d.tagName) ? [d] :
+        d.querySelectorAll('path,line,polyline,polygon,circle,ellipse,rect');
+      Array.prototype.forEach.call(formas, function (f) {
+        if (f.closest('[data-no-dibujar]')) return;
+        f.setAttribute('pathLength', '1');
+      });
+    });
+    // Pasos
+    var max = 0;
+    s.querySelectorAll('[data-paso]').forEach(function (p) {
+      var n = parseInt(p.getAttribute('data-paso'), 10) || 0;
+      if (n > max) max = n;
+    });
+    def._pasos = max;
+    // Contadores: el texto inicial es el valor final (sirve sin JS y en captura)
+    s.querySelectorAll('[data-contar]').forEach(function (c) {
+      c.textContent = formatear(parseFloat(c.getAttribute('data-contar')) || 0, c);
+    });
+    // Barras de estado de teléfono vacías
+    s.querySelectorAll('.estado').forEach(llenarEstado);
+    // Piezas decorativas de los dispositivos
+    s.querySelectorAll('.telefono').forEach(completarTelefono);
+    s.querySelectorAll('.tableta').forEach(completarTableta);
+    s.querySelectorAll('.laptop').forEach(completarLaptop);
+  }
+
+  function llenarEstado(e) {
+    if (e.children.length) return;
+    var hora = e.getAttribute('data-hora') || '9:41';
+    e.setAttribute('aria-hidden', 'true');
+    e.innerHTML = '<span class="estado__hora">' + escapar(hora) + '</span>' +
+      '<span class="estado__iconos">' + ICONOS_ESTADO.senal + ICONOS_ESTADO.wifi + ICONOS_ESTADO.bateria + '</span>';
+  }
+  function completarTelefono(t) {
+    if (t.querySelector('.telefono__isla')) return;
+    var p = t.querySelector('.telefono__pantalla');
+    ['accion', 'volumen-arriba', 'volumen-abajo', 'encendido'].forEach(function (b) {
+      t.appendChild(el('span', 'telefono__boton telefono__boton--' + b, { 'aria-hidden': 'true' }));
+    });
+    if (p) {
+      p.appendChild(el('span', 'telefono__isla', { 'aria-hidden': 'true' }));
+      p.appendChild(el('span', 'telefono__inicio', { 'aria-hidden': 'true' }));
+      p.appendChild(el('span', 'telefono__brillo', { 'aria-hidden': 'true' }));
+    }
+  }
+  function completarTableta(t) {
+    if (t.querySelector('.tableta__camara')) return;
+    t.appendChild(el('span', 'tableta__camara', { 'aria-hidden': 'true' }));
+    var p = t.querySelector('.tableta__pantalla');
+    if (p) p.appendChild(el('span', 'telefono__brillo', { 'aria-hidden': 'true' }));
+  }
+  function completarLaptop(l) {
+    var tapa = l.querySelector('.laptop__tapa');
+    if (tapa && !tapa.querySelector('.laptop__camara')) tapa.appendChild(el('span', 'laptop__camara', { 'aria-hidden': 'true' }));
+    var pant = l.querySelector('.laptop__pantalla');
+    if (pant && !pant.querySelector('.telefono__brillo')) pant.appendChild(el('span', 'telefono__brillo laptop__brillo', { 'aria-hidden': 'true' }));
+    if (!l.querySelector('.laptop__base')) l.appendChild(el('div', 'laptop__base', { 'aria-hidden': 'true' }));
+  }
+
+  // ── Barra inferior ────────────────────────────────────────
+  function construirBarra() {
+    barra = el('nav', 'barra', { 'aria-label': 'Navegación de la presentación' });
+    var total = registro.length;
+    var h = '';
+    h += '<div class="barra__info">' +
+           '<span class="marca marca--mini barra__marca" aria-hidden="true"></span>' +
+           '<span class="barra__sep" aria-hidden="true"></span>' +
+           '<div class="barra__textos">' +
+             '<span class="barra__contador-movil" aria-hidden="true"></span>' +
+             '<span class="barra__seccion"></span>' +
+             '<span class="barra__titulo"></span>' +
+           '</div>' +
+         '</div>';
+    h += '<div class="traza" role="group" aria-label="Progreso">';
+    var grupos = agruparPorSeccion();
+    grupos.forEach(function (g) {
+      h += '<div class="traza__grupo" style="--n:' + g.indices.length + '" data-seccion="' + escapar(g.seccion) + '">';
+      g.indices.forEach(function (i) {
+        var d = registro[i];
+        h += '<button type="button" class="traza__nodo" data-ir="' + i + '" aria-label="Ir a ' + (i + 1) + ': ' + escapar(d.titulo) + '">' +
+             '<span class="traza__tip" aria-hidden="true"><b>' + dosDigitos(i + 1) + '</b>' + escapar(d.titulo) + '</span></button>';
+      });
+      h += '</div>';
+    });
+    h += '</div>';
+    h += '<div class="barra__acciones">' +
+           '<span class="barra__contador" aria-hidden="true"></span>' +
+           '<button type="button" class="boton-barra" data-accion="anterior" aria-label="Anterior (←)" title="Anterior (←)">' + ICONOS.anterior + '</button>' +
+           '<button type="button" class="boton-barra" data-accion="siguiente" aria-label="Siguiente (→)" title="Siguiente (→)">' + ICONOS.siguiente + '</button>' +
+           '<button type="button" class="boton-barra" data-accion="indice" aria-label="Índice (I)" title="Índice (I)" aria-haspopup="dialog" aria-expanded="false">' + ICONOS.indice + '</button>' +
+           '<button type="button" class="boton-barra" data-accion="pantalla" aria-label="Pantalla completa (F)" title="Pantalla completa (F)">' + ICONOS.pantalla + '</button>' +
+         '</div>' +
+         '<div class="barra__linea" aria-hidden="true"><i></i></div>';
+    barra.innerHTML = h;
+    raiz.appendChild(barra);
+    refsBarra = {
+      seccion: barra.querySelector('.barra__seccion'),
+      titulo: barra.querySelector('.barra__titulo'),
+      contador: barra.querySelector('.barra__contador'),
+      contadorMovil: barra.querySelector('.barra__contador-movil'),
+      nodos: Array.prototype.slice.call(barra.querySelectorAll('.traza__nodo')),
+      anterior: barra.querySelector('[data-accion="anterior"]'),
+      siguiente: barra.querySelector('[data-accion="siguiente"]'),
+      indice: barra.querySelector('[data-accion="indice"]'),
+      pantalla: barra.querySelector('[data-accion="pantalla"]')
+    };
+    if (!pantallaCompletaDisponible()) refsBarra.pantalla.hidden = true;
+    barra.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      var acc = b.getAttribute('data-accion');
+      if (b.hasAttribute('data-ir')) { ir(parseInt(b.getAttribute('data-ir'), 10)); return; }
+      if (acc === 'anterior') anterior();
+      else if (acc === 'siguiente') siguiente();
+      else if (acc === 'indice') alternarIndice();
+      else if (acc === 'pantalla') alternarPantallaCompleta();
+    });
+    if (total === 0) barra.hidden = true;
+  }
+
+  function agruparPorSeccion() {
+    var grupos = [];
+    registro.forEach(function (d, i) {
+      var g = grupos[grupos.length - 1];
+      if (!g || g.seccion !== d.seccion) { g = { seccion: d.seccion, indices: [] }; grupos.push(g); }
+      g.indices.push(i);
+    });
+    return grupos;
+  }
+
+  // ── Índice ─────────────────────────────────────────────────
+  function construirIndice() {
+    indiceEl = el('div', 'indice', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'indice-titulo', inert: '' });
+    indiceEl.setAttribute('data-tema', 'ink');
+    var h = '<div class="indice__velo" data-cerrar></div><div class="indice__panel">' +
+      '<header class="indice__cabecera"><div>' +
+        '<p class="etiqueta etiqueta--punto">Índice · ' + registro.length + ' diapositivas</p>' +
+        '<h2 class="indice__titulo" id="indice-titulo">' + escapar(opcionesInicio.titulo || 'Presentación') + '</h2>' +
+        (opcionesInicio.subtitulo ? '<p class="indice__subtitulo">' + escapar(opcionesInicio.subtitulo) + '</p>' : '') +
+      '</div><button type="button" class="indice__cerrar" data-cerrar aria-label="Cerrar índice"><span>Cerrar</span><kbd>Esc</kbd>' + ICONOS.cerrar + '</button></header>' +
+      '<div class="indice__secciones">';
+    var k = 0;
+    agruparPorSeccion().forEach(function (g, gi) {
+      h += '<section class="indice__seccion"><h3 class="etiqueta etiqueta--punto">' + escapar(g.seccion || 'Sección ' + (gi + 1)) +
+        '<span>' + dosDigitos(g.indices[0] + 1) + (g.indices.length > 1 ? '–' + dosDigitos(g.indices[g.indices.length - 1] + 1) : '') + '</span></h3><ol>';
+      g.indices.forEach(function (i) {
+        var d = registro[i];
+        h += '<li><button type="button" class="indice__tarjeta" data-ir="' + i + '" style="--i:' + (k++) + '">' +
+          '<span class="indice__num">' + dosDigitos(i + 1) + '</span>' +
+          '<span class="indice__nombre">' + escapar(d.titulo) + '</span>' +
+          (d.resumen ? '<span class="indice__resumen">' + escapar(d.resumen) + '</span>' : '<span></span>') +
+          '<span class="indice__aqui">Estás aquí</span></button></li>';
+      });
+      h += '</ol></section>';
+    });
+    h += '</div></div>';
+    indiceEl.innerHTML = h;
+    raiz.appendChild(indiceEl);
+    tarjetasIndice = Array.prototype.slice.call(indiceEl.querySelectorAll('.indice__tarjeta'));
+    indiceEl.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-ir]');
+      if (t) { var n = parseInt(t.getAttribute('data-ir'), 10); cerrarIndice(false); ir(n); return; }
+      if (e.target.closest('[data-cerrar]')) cerrarIndice(true);
+    });
+  }
+
+  function abrirIndice() {
+    if (estado.indiceAbierto || !registro.length) return;
+    estado.indiceAbierto = true;
+    focoAntesIndice = D.activeElement;
+    tarjetasIndice.forEach(function (t, i) {
+      var actual = i === estado.indice;
+      t.classList.toggle('indice__tarjeta--actual', actual);
+      if (actual) t.setAttribute('aria-current', 'step'); else t.removeAttribute('aria-current');
+    });
+    indiceEl.removeAttribute('inert');
+    indiceEl.classList.add('indice--abierto');
+    escenario.setAttribute('inert', '');
+    barra.setAttribute('inert', '');
+    refsBarra.indice.setAttribute('aria-expanded', 'true');
+    raiz.classList.add('con-indice');
+    despertarBarra();
+    var t = tarjetasIndice[estado.indice] || tarjetasIndice[0];
+    if (t) {
+      try { t.focus({ preventScroll: true }); } catch (e) { t.focus(); }
+      var panel = indiceEl.querySelector('.indice__panel');
+      var r = t.getBoundingClientRect();
+      if (r.bottom > W.innerHeight - 20) panel.scrollTop += r.bottom - W.innerHeight + 80;
+    }
+  }
+  function cerrarIndice(devolverFoco) {
+    if (!estado.indiceAbierto) return;
+    estado.indiceAbierto = false;
+    indiceEl.classList.remove('indice--abierto');
+    indiceEl.setAttribute('inert', '');
+    escenario.removeAttribute('inert');
+    barra.removeAttribute('inert');
+    refsBarra.indice.setAttribute('aria-expanded', 'false');
+    raiz.classList.remove('con-indice');
+    if (devolverFoco !== false) {
+      var f = focoAntesIndice && D.contains(focoAntesIndice) && focoAntesIndice !== D.body ? focoAntesIndice : refsBarra.indice;
+      try { f.focus({ preventScroll: true }); } catch (e) {}
+    } else {
+      try { refsBarra.indice.focus({ preventScroll: true }); } catch (e) {}
+    }
+  }
+  function alternarIndice() { if (estado.indiceAbierto) cerrarIndice(true); else abrirIndice(); }
+
+  function teclasIndice(e) {
+    var k = e.key;
+    var enfocables = Array.prototype.slice.call(indiceEl.querySelectorAll('button'));
+    var pos = tarjetasIndice.indexOf(D.activeElement);
+    if (k === 'Escape' || ((k === 'i' || k === 'I' || k === 'g' || k === 'G') && !e.altKey)) {
+      e.preventDefault(); cerrarIndice(true); return;
+    }
+    if (k === 'ArrowDown' || k === 'ArrowRight' || k === 'ArrowUp' || k === 'ArrowLeft' || k === 'Home' || k === 'End') {
+      e.preventDefault();
+      var n = tarjetasIndice.length - 1;
+      var dest = pos < 0 ? Math.max(0, estado.indice) :
+        (k === 'Home' ? 0 : k === 'End' ? n : (k === 'ArrowDown' || k === 'ArrowRight') ? Math.min(n, pos + 1) : Math.max(0, pos - 1));
+      var t = tarjetasIndice[dest];
+      if (t) { t.focus(); t.scrollIntoView({ block: 'nearest' }); }
+      return;
+    }
+    if (k === 'Tab') {
+      var a = enfocables.indexOf(D.activeElement);
+      if (e.shiftKey && a <= 0) { e.preventDefault(); enfocables[enfocables.length - 1].focus(); }
+      else if (!e.shiftKey && (a === enfocables.length - 1 || a < 0)) { e.preventDefault(); enfocables[0].focus(); }
+    }
+  }
+
+  // ═══ Navegación ═════════════════════════════════════════════
+  function resolver(n) {
+    if (typeof n === 'string') {
+      if (/^\d+$/.test(n)) return parseInt(n, 10) - 1;
+      for (var i = 0; i < registro.length; i++) if (registro[i].id === n) return i;
+      return null;
+    }
+    if (typeof n === 'number' && isFinite(n)) return Math.round(n);
+    return null;
+  }
+  function ir(n) {
+    var i = resolver(n);
+    if (i == null || i < 0 || i >= registro.length) return false;
+    if (i === estado.indice) return false;
+    mostrar(i, i > estado.indice ? 'adelante' : 'atras', {});
+    return true;
+  }
+  function siguiente() {
+    var def = registro[estado.indice];
+    if (def && estado.paso < def._pasos) { cambiarPaso(estado.paso + 1); return true; }
+    if (estado.indice < registro.length - 1) { mostrar(estado.indice + 1, 'adelante', {}); return true; }
+    return false;
+  }
+  function anterior() {
+    if (estado.paso > 0 && !modos.captura) { cambiarPaso(estado.paso - 1); return true; }
+    if (estado.indice > 0) { mostrar(estado.indice - 1, 'atras', { todosLosPasos: true }); return true; }
+    return false;
+  }
+  function actual() {
+    var d = registro[estado.indice];
+    return d ? { indice: estado.indice, id: d.id, titulo: d.titulo, seccion: d.seccion, tema: d.tema, paso: estado.paso, pasos: d._pasos, total: registro.length } : null;
+  }
+
+  function cambiarPaso(n) {
+    var i = estado.indice;
+    estado.paso = n;
+    aplicarPasos(i, n);
+    var def = registro[i];
+    if (def.alPaso) seguro(i, 'alPaso', function () { def.alPaso(diapos[i], n); });
+    actualizarBarra();
+    D.dispatchEvent(new CustomEvent('presentacion:paso', { detail: { indice: i, id: def.id, paso: n } }));
+  }
+  function aplicarPasos(i, n) {
+    var s = diapos[i];
+    s.querySelectorAll('[data-paso]').forEach(function (p) {
+      var k = parseInt(p.getAttribute('data-paso'), 10) || 0;
+      p.classList.toggle('paso-visible', k <= n);
+    });
+    s.setAttribute('data-paso-actual', n);
+  }
+
+  function cancelarAnimaciones() {
+    animaciones.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+    animaciones = [];
+    if (temporizadorSalida) { clearTimeout(temporizadorSalida); temporizadorSalida = null; }
+    diapos.forEach(function (s) {
+      if (s.classList.contains('diapo--saliendo')) terminarSalida(s);
+      s.classList.remove('diapo--en-transicion', 'diapo--atras');
+    });
+  }
+  function terminarSalida(s) {
+    s.classList.remove('diapo--saliendo', 'diapo--en-transicion', 'diapo--atras', 'anim-activa');
+  }
+
+  var CUADROS = {
+    // hacia adelante: la que sale se hunde en profundidad; la que entra llega desde enfrente y abajo
+    adelante: {
+      sale: [
+        { transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 0 },
+        { opacity: 0, offset: 0.42 },
+        { transform: 'translate3d(0,-5%,-560px) rotateX(9deg)', opacity: 0, offset: 1 }
+      ],
+      entra: [
+        { transform: 'translate3d(0,9%,240px) rotateX(-8deg)', opacity: 0, offset: 0 },
+        { opacity: 1, offset: 0.42 },
+        { transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 1 }
+      ]
+    },
+    // hacia atrás: el reverso exacto
+    atras: {
+      sale: [
+        { transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 0 },
+        { opacity: 0, offset: 0.4 },
+        { transform: 'translate3d(0,9%,240px) rotateX(-8deg)', opacity: 0, offset: 1 }
+      ],
+      entra: [
+        { transform: 'translate3d(0,-5%,-560px) rotateX(9deg)', opacity: 0, offset: 0 },
+        { opacity: 1, offset: 0.45 },
+        { transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 1 }
+      ]
+    }
+  };
+
+  // Transiciones propias de esta presentación: cada diapositiva elige la suya con
+  // `transicion: 'iris' | 'lente' | 'caida' | 'lateral' | 'giro' | 'escaneo' | 'estrato' | 'plano' | 'pliegue'`;
+  // sin ella, la de siempre. Al regresar se reproduce la misma transición al revés.
+  // Campos opcionales de cada transición:
+  //   linea   cuadros para la línea dorada del escaneo (.transicion-linea), sincronizada con la entrante
+  //   fondo   [forma chica, forma grande] del clip-path con que se revela el color del tema nuevo
+  //           (por omisión, un círculo desde el punto de fuga)
+  //   curva, duracion (factor sobre --transicion)
+  var TRANSICIONES = {
+    // La capa sube como la línea de escaneo: la entrante se revela de abajo hacia arriba
+    escaneo: {
+      sale: [{ opacity: 1, transform: 'scale(1)', offset: 0 }, { opacity: .7, offset: .8 }, { opacity: 0, transform: 'scale(.985)', offset: 1 }],
+      entra: [{ clipPath: 'inset(100% 0 0 0)', offset: 0 }, { clipPath: 'inset(0% 0 0 0)', offset: 1 }],
+      linea: [{ transform: 'translate3d(0,100vh,0)', opacity: 0, offset: 0 }, { opacity: 1, offset: .05 }, { opacity: 1, offset: .9 },
+              { transform: 'translate3d(0,0vh,0)', opacity: 0, offset: 1 }],
+      fondo: ['inset(100% 0 0 0)', 'inset(0% 0 0 0)'],
+      curva: 'cubic-bezier(.55,.06,.25,1)', duracion: 1.25
+    },
+    // Un estrato nuevo sube desde abajo; el anterior baja y se aleja, enterrado
+    estrato: {
+      sale: [{ transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 0 }, { opacity: 0, offset: .62 },
+             { transform: 'translate3d(0,18%,-460px) rotateX(16deg)', opacity: 0, offset: 1 }],
+      entra: [{ transform: 'translate3d(0,64%,-80px) rotateX(-20deg)', opacity: 0, offset: 0 }, { opacity: 1, offset: .4 },
+              { transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 1 }],
+      fondo: ['inset(100% 0 0 0)', 'inset(0% 0 0 0)']
+    },
+    // La cámara se inclina hacia la vista de mapa: la saliente se acuesta y se hunde; la entrante se levanta
+    plano: {
+      sale: [{ transformOrigin: '50% 100%', transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 0 }, { opacity: 1, offset: .3 },
+             { opacity: 0, offset: .72 }, { transformOrigin: '50% 100%', transform: 'translate3d(0,20%,-240px) rotateX(80deg)', opacity: 0, offset: 1 }],
+      entra: [{ transformOrigin: '50% 100%', transform: 'translate3d(0,12%,-140px) rotateX(72deg)', opacity: 0, offset: 0 }, { opacity: 0, offset: .2 },
+              { opacity: 1, offset: .6 }, { transformOrigin: '50% 100%', transform: 'translate3d(0,0,0) rotateX(0deg)', opacity: 1, offset: 1 }],
+      duracion: 1.1
+    },
+    // Se despliega desde el borde derecho, como una hoja del levantamiento
+    pliegue: {
+      sale: [{ transform: 'translate3d(0,0,0) scale(1)', opacity: 1, offset: 0 }, { opacity: 0, offset: .7 },
+             { transform: 'translate3d(-12%,0,-240px) scale(.96)', opacity: 0, offset: 1 }],
+      entra: [{ transformOrigin: '100% 50%', transform: 'rotateY(-98deg)', opacity: 1, offset: 0 },
+              { transformOrigin: '100% 50%', transform: 'rotateY(0deg)', opacity: 1, offset: 1 }],
+      fondo: ['inset(0 0 0 100%)', 'inset(0 0 0 0%)'],
+      duracion: 1.15
+    },
+    // El halo que se abre desde el centro
+    iris: {
+      sale: [{ opacity: 1, transform: 'scale(1)', offset: 0 }, { opacity: 0, transform: 'scale(.94)', offset: .5 }, { opacity: 0, transform: 'scale(.94)', offset: 1 }],
+      entra: [{ clipPath: 'circle(0% at 50% 46%)', opacity: 1, offset: 0 }, { clipPath: 'circle(120% at 50% 46%)', opacity: 1, offset: 1 }]
+    },
+    // Acercarse al microscopio: se atraviesa la diapositiva que sale
+    lente: {
+      sale: [{ transform: 'scale(1)', opacity: 1, offset: 0 }, { opacity: 0, offset: .55 }, { transform: 'scale(2.4)', opacity: 0, offset: 1 }],
+      entra: [{ transform: 'scale(.72)', opacity: 0, offset: 0 }, { opacity: 0, offset: .3 }, { transform: 'scale(1)', opacity: 1, offset: 1 }]
+    },
+    // Bajar a través del suelo
+    caida: {
+      sale: [{ transform: 'translate3d(0,0,0)', opacity: 1, offset: 0 }, { transform: 'translate3d(0,-70%,0)', opacity: 0, offset: 1 }],
+      entra: [{ transform: 'translate3d(0,70%,0)', opacity: 0, offset: 0 }, { transform: 'translate3d(0,0,0)', opacity: 1, offset: 1 }]
+    },
+    // Girar la escena sobre un eje vertical
+    lateral: {
+      sale: [{ transform: 'translate3d(0,0,0) rotateY(0deg)', opacity: 1, offset: 0 }, { opacity: 0, offset: .55 }, { transform: 'translate3d(-46%,0,-320px) rotateY(38deg)', opacity: 0, offset: 1 }],
+      entra: [{ transform: 'translate3d(46%,0,-320px) rotateY(-38deg)', opacity: 0, offset: 0 }, { opacity: 1, offset: .55 }, { transform: 'translate3d(0,0,0) rotateY(0deg)', opacity: 1, offset: 1 }]
+    },
+    // Girar la placa sobre su centro
+    giro: {
+      sale: [{ transform: 'rotate(0deg) scale(1)', opacity: 1, offset: 0 }, { opacity: 0, offset: .5 }, { transform: 'rotate(7deg) scale(.86)', opacity: 0, offset: 1 }],
+      entra: [{ transform: 'rotate(-7deg) scale(1.1)', opacity: 0, offset: 0 }, { opacity: 1, offset: .55 }, { transform: 'rotate(0deg) scale(1)', opacity: 1, offset: 1 }]
+    }
+  };
+  function alReves(cuadros) {
+    return cuadros.slice().reverse().map(function (c) {
+      var r = {}; for (var k in c) r[k] = k === 'offset' ? 1 - c[k] : c[k];
+      return r;
+    });
+  }
+  // La transición que manda: al avanzar, la de la que entra; al regresar, la de la que sale
+  function transicionDe(sale, entra, direccion) {
+    var s = direccion === 'atras' ? sale : entra;
+    if (!s) return null;
+    var id = s.getAttribute('data-id');
+    var def = registro.filter(function (d) { return d.id === id; })[0];
+    return (def && TRANSICIONES[def.transicion]) || null;
+  }
+  function cuadrosDe(sale, entra, direccion) {
+    var atras = direccion === 'atras';
+    var t = transicionDe(sale, entra, direccion);
+    if (!t) return CUADROS[atras ? 'atras' : 'adelante'];
+    return atras ? { sale: alReves(t.entra), entra: alReves(t.sale), linea: t.linea ? alReves(t.linea) : null, t: t }
+                 : { sale: t.sale, entra: t.entra, linea: t.linea || null, t: t };
+  }
+  function duracionTransicion(t) {
+    var base = parseFloat(getComputedStyle(D.documentElement).getPropertyValue('--transicion')) || 1000;
+    return Math.round(base * (t && t.duracion ? t.duracion : 1));
+  }
+  var CURVA_TRANSICION = 'cubic-bezier(.2,.75,.2,1)';
+
+  function mostrar(n, direccion, op) {
+    op = op || {};
+    if (!registro.length) return;
+    n = Math.max(0, Math.min(registro.length - 1, n));
+    var previo = estado.indice;
+    if (n === previo && !op.forzar) return;
+    cancelarAnimaciones();
+
+    var entrante = diapos[n];
+    var saliente = previo >= 0 && previo !== n ? diapos[previo] : null;
+    var def = registro[n];
+    var defPrevio = saliente ? registro[previo] : null;
+
+    estado.indice = n;
+    estado.direccion = direccion;
+    estado.paso = (modos.captura || op.todosLosPasos) ? def._pasos : 0;
+    aplicarPasos(n, estado.paso);
+
+    diapos.forEach(function (s, i) {
+      var esActual = i === n;
+      s.classList.toggle('diapo--actual', esActual);
+      s.classList.toggle('diapo--vecina', Math.abs(i - n) === 1);
+      if (esActual) { s.removeAttribute('inert'); s.removeAttribute('aria-hidden'); }
+      else { s.setAttribute('inert', ''); s.setAttribute('aria-hidden', 'true'); }
+    });
+
+    // Fondo y tema
+    var prog = registro.length > 1 ? n / (registro.length - 1) : 0;
+    raiz.style.setProperty('--progreso', prog.toFixed(4));
+    raiz.style.setProperty('--indice', n);
+    var temaPrevio = raiz.getAttribute('data-tema');
+    if (temaPrevio && temaPrevio !== def.tema && !op.instantaneo && !sinAnimar() && !movimientoReducido()) {
+      revelarTema(temaPrevio, def.tema, direccion, transicionDe(saliente, entrante, direccion));
+    }
+    raiz.setAttribute('data-tema', def.tema);
+    D.documentElement.setAttribute('data-tema-actual', def.tema);
+    var meta = D.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', def.tema === 'bone' ? '#F5EBD6' : '#17130F');
+
+    // Salida
+    if (saliente) {
+      if (defPrevio.alSalir) seguro(previo, 'alSalir', function () { defPrevio.alSalir(saliente, direccion); });
+      transicionar(saliente, entrante, direccion, op.instantaneo);
+    }
+
+    // Entrada
+    reiniciarAnimacionesEntrada(entrante);
+    entrante.querySelector('.diapo__contenido').scrollTop = 0;
+    escalarPantallasDe(entrante);
+    prepararInclinacionDiapo(entrante);
+    animarContadores(entrante);
+    if (def.alEntrar) seguro(n, 'alEntrar', function () { def.alEntrar(entrante, direccion); });
+
+    actualizarBarra();
+    escribirHash(def.id);
+    anunciar(n);
+    if (estado.indiceAbierto) cerrarIndice(false);
+    D.dispatchEvent(new CustomEvent('presentacion:cambio', { detail: { indice: n, id: def.id, direccion: direccion } }));
+  }
+
+  // Cambio de tema: el color nuevo se abre en círculo desde el punto de fuga (o se cierra al regresar)
+  var animRevelado = null;
+  function colorTema(t) {
+    var v = getComputedStyle(D.documentElement).getPropertyValue(t === 'bone' ? '--bone' : '--ink').trim();
+    return v || (t === 'bone' ? '#F5EBD6' : '#17130F');
+  }
+  // t (opcional): la transición que manda. Si trae `fondo`, el color nuevo se revela con esa
+  // forma y al mismo ritmo que la diapositiva (p. ej. de abajo hacia arriba en `escaneo`).
+  function revelarTema(viejo, nuevo, direccion, t) {
+    var capa = fondo.querySelector('.fondo__revelado');
+    if (animRevelado) { try { animRevelado.cancel(); } catch (e) {} }
+    if (!capa || typeof capa.animate !== 'function') return;
+    var adelante = direccion !== 'atras';
+    fondo.style.backgroundColor = colorTema(adelante ? viejo : nuevo);
+    capa.style.backgroundColor = colorTema(adelante ? nuevo : viejo);
+    capa.style.visibility = 'visible';
+    var chico = 'circle(0% at 50% 46%)', grande = 'circle(76vmax at 50% 46%)';
+    var dur = 950, curva = adelante ? 'cubic-bezier(.32,.72,0,1)' : 'cubic-bezier(.5,0,.3,1)';
+    if (t && t.fondo) {
+      chico = t.fondo[0]; grande = t.fondo[1];
+      dur = duracionTransicion(t); curva = t.curva || CURVA_TRANSICION;
+    }
+    var a = capa.animate({ clipPath: adelante ? [chico, grande] : [grande, chico] },
+      { duration: dur, easing: curva, fill: 'both' });
+    animRevelado = a;
+    var fin = function () {
+      if (animRevelado !== a) return;
+      capa.style.visibility = 'hidden';
+      fondo.style.backgroundColor = '';
+      animRevelado = null;
+      try { a.cancel(); } catch (e) {}
+    };
+    a.onfinish = fin;
+    a.oncancel = function () {
+      if (animRevelado === a) { capa.style.visibility = 'hidden'; fondo.style.backgroundColor = ''; animRevelado = null; }
+    };
+  }
+
+  function transicionar(sale, entra, direccion, instantaneo) {
+    if (instantaneo || sinAnimar() || typeof sale.animate !== 'function') { terminarSalida(sale); return; }
+    sale.classList.add('diapo--saliendo', 'diapo--en-transicion');
+    entra.classList.add('diapo--en-transicion');
+    if (direccion === 'atras') sale.classList.add('diapo--atras');
+    var dur, cuadros, opc;
+    if (movimientoReducido()) {
+      dur = 220;
+      cuadros = { sale: [{ opacity: 1 }, { opacity: 0 }], entra: [{ opacity: 0 }, { opacity: 1 }] };
+      opc = { duration: dur, easing: 'ease', fill: 'both' };
+    } else {
+      cuadros = cuadrosDe(sale, entra, direccion);
+      dur = duracionTransicion(cuadros.t);
+      opc = { duration: dur, easing: (cuadros.t && cuadros.t.curva) || CURVA_TRANSICION, fill: 'both' };
+    }
+    var a1 = sale.animate(cuadros.sale, opc);
+    var a2 = entra.animate(cuadros.entra, opc);
+    animaciones.push(a1, a2);
+    // La línea dorada del escaneo viaja con el borde de la entrante
+    if (cuadros.linea) {
+      var linea = escenario.querySelector('.transicion-linea');
+      if (!linea) { linea = el('div', 'transicion-linea', { 'aria-hidden': 'true' }); escenario.appendChild(linea); }
+      var a3 = linea.animate(cuadros.linea, { duration: dur, easing: opc.easing, fill: 'both' });
+      animaciones.push(a3);
+      a3.onfinish = function () { try { a3.cancel(); } catch (e) {} };
+    }
+    a2.onfinish = function () {
+      entra.classList.remove('diapo--en-transicion');
+      try { a2.cancel(); } catch (e) {}
+    };
+    a1.onfinish = function () {
+      terminarSalida(sale);
+      try { a1.cancel(); } catch (e) {}
+    };
+    // Por si la pestaña está oculta y no corren los cuadros
+    temporizadorSalida = setTimeout(function () { terminarSalida(sale); }, dur + 400);
+  }
+
+  function reiniciarAnimacionesEntrada(s) {
+    s.classList.remove('anim-activa');
+    void s.offsetWidth; // reinicia las animaciones CSS
+    s.classList.add('anim-activa');
+  }
+
+  // ── Contadores ────────────────────────────────────────────
+  function formatear(v, c) {
+    var dec = parseInt(c.getAttribute('data-decimales'), 10) || 0;
+    try { return new Intl.NumberFormat('es-GT', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v); }
+    catch (e) { return v.toFixed(dec); }
+  }
+  function animarContadores(s) {
+    var cs = s.querySelectorAll('[data-contar]');
+    if (!cs.length) return;
+    cs.forEach(function (c) {
+      var fin = parseFloat(c.getAttribute('data-contar')) || 0;
+      if (sinAnimar() || movimientoReducido()) { c.textContent = formatear(fin, c); return; }
+      var dur = parseFloat(c.getAttribute('data-duracion')) || 1400;
+      var retraso = msDe(getComputedStyle(c).getPropertyValue('--retraso')) + 160;
+      var t0 = null, token = {};
+      c.__contar = token;
+      c.textContent = formatear(0, c);
+      var cuadro = function (t) {
+        if (c.__contar !== token) return;
+        if (t0 == null) t0 = t + retraso;
+        var p = Math.max(0, Math.min(1, (t - t0) / dur));
+        var e = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+        c.textContent = formatear(fin * e, c);
+        if (p < 1) requestAnimationFrame(cuadro);
+      };
+      requestAnimationFrame(cuadro);
+    });
+  }
+
+  // ── Barra: estado ─────────────────────────────────────────
+  function actualizarBarra() {
+    var n = estado.indice, total = registro.length, def = registro[n];
+    if (!def) return;
+    refsBarra.seccion.textContent = def.seccion;
+    refsBarra.titulo.textContent = def.titulo;
+    refsBarra.contador.innerHTML = '<b>' + dosDigitos(n + 1) + '</b> / ' + dosDigitos(total);
+    refsBarra.contadorMovil.innerHTML = '<b>' + dosDigitos(n + 1) + '</b> / ' + dosDigitos(total) +
+      (def.seccion ? ' · ' + escapar(def.seccion) : '');
+    refsBarra.nodos.forEach(function (b, i) {
+      b.classList.toggle('traza__nodo--hecho', i < n);
+      b.classList.toggle('traza__nodo--actual', i === n);
+      if (i === n) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+    });
+    refsBarra.anterior.disabled = n === 0 && estado.paso === 0;
+    refsBarra.siguiente.disabled = n === total - 1 && estado.paso >= def._pasos;
+  }
+
+  function anunciar(n) {
+    var def = registro[n];
+    var texto = 'Diapositiva ' + (n + 1) + ' de ' + registro.length + ': ' + def.titulo;
+    vivo.textContent = '';
+    setTimeout(function () { vivo.textContent = texto; }, 30);
+  }
+
+  // ── Hash ──────────────────────────────────────────────────
+  function leerHash() {
+    var h = (location.hash || '').replace(/^#\/?/, '');
+    try { h = decodeURIComponent(h); } catch (e) { return null; } // hash mal formado: se ignora
+    if (!h) return null;
+    var i = resolver(h);
+    return i != null && i >= 0 && i < registro.length ? i : null;
+  }
+  function escribirHash(id) {
+    var nuevo = '#/' + id;
+    if (location.hash === nuevo) return;
+    try { history.replaceState(null, '', nuevo); }
+    catch (e) { try { location.replace(nuevo); } catch (e2) {} }
+  }
+
+  // ═══ Pantalla completa ══════════════════════════════════════
+  function pantallaCompletaDisponible() {
+    var de = D.documentElement;
+    return !!((D.fullscreenEnabled || D.webkitFullscreenEnabled) && (de.requestFullscreen || de.webkitRequestFullscreen));
+  }
+  function enPantallaCompleta() { return !!(D.fullscreenElement || D.webkitFullscreenElement); }
+  function alternarPantallaCompleta() {
+    if (!pantallaCompletaDisponible()) return;
+    var de = D.documentElement;
+    try {
+      if (enPantallaCompleta()) (D.exitFullscreen || D.webkitExitFullscreen).call(D);
+      else {
+        var r = (de.requestFullscreen || de.webkitRequestFullscreen).call(de);
+        if (r && r.catch) r.catch(function () {});
+      }
+    } catch (e) {}
+  }
+  function alCambiarPantallaCompleta() {
+    var fs = enPantallaCompleta();
+    refsBarra.pantalla.innerHTML = fs ? ICONOS.salirPantalla : ICONOS.pantalla;
+    var t = fs ? 'Salir de pantalla completa (F)' : 'Pantalla completa (F)';
+    refsBarra.pantalla.setAttribute('aria-label', t);
+    refsBarra.pantalla.setAttribute('title', t);
+    despertarBarra();
+  }
+
+  // ═══ Barra en reposo ════════════════════════════════════════
+  var temporizadorReposo = null;
+  function despertarBarra() {
+    if (!barra) return;
+    barra.classList.remove('barra--reposo');
+    D.documentElement.classList.remove('cursor-oculto');
+    clearTimeout(temporizadorReposo);
+    if (mqTactil.matches || modos.captura || modos.autoprueba) return;
+    temporizadorReposo = setTimeout(function () {
+      if (estado.indiceAbierto || barra.matches(':hover') || barra.contains(D.activeElement) && D.activeElement.matches(':focus-visible')) {
+        despertarBarra(); return;
+      }
+      barra.classList.add('barra--reposo');
+      if (enPantallaCompleta()) D.documentElement.classList.add('cursor-oculto');
+    }, 2500);
+  }
+
+  // ═══ Eventos ════════════════════════════════════════════════
+  function esCampo(t) {
+    if (!t || t === D || t === D.body || !t.closest) return false;
+    return !!t.closest('input,textarea,select,[contenteditable=""],[contenteditable="true"]');
+  }
+  function esControl(t) {
+    return !!(t && t.closest && t.closest('button,a[href],summary,[role="button"]'));
+  }
+
+  function instalarEventos() {
+    D.addEventListener('keydown', alTeclear);
+    W.addEventListener('hashchange', function () {
+      var i = leerHash();
+      if (i != null && i !== estado.indice) ir(i);
+    });
+    ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(function (ev) {
+      D.addEventListener(ev, despertarBarra, { passive: true });
+    });
+    D.addEventListener('fullscreenchange', alCambiarPantallaCompleta);
+    D.addEventListener('webkitfullscreenchange', alCambiarPantallaCompleta);
+    instalarRueda();
+    instalarDeslizar();
+    instalarInclinacion();
+    despertarBarra();
+  }
+
+  function alTeclear(e) {
+    if (e.defaultPrevented || e.isComposing) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (estado.indiceAbierto) { teclasIndice(e); return; }
+    if (esCampo(e.target)) return;
+    var k = e.key, hecho = true;
+    switch (k) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown':
+        siguiente(); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        anterior(); break;
+      case ' ': case 'Spacebar':
+        if (esControl(e.target)) { hecho = false; break; }
+        if (e.shiftKey) anterior(); else siguiente();
+        break;
+      case 'Enter':
+        if (esControl(e.target)) { hecho = false; break; }
+        siguiente(); break;
+      case 'Home': ir(0); break;
+      case 'End': ir(registro.length - 1); break;
+      case 'i': case 'I': case 'g': case 'G': alternarIndice(); break;
+      case 'f': case 'F': alternarPantallaCompleta(); break;
+      case 'Escape': hecho = false; break;
+      default: hecho = false;
+    }
+    if (hecho) e.preventDefault();
+  }
+
+  // Rueda / trackpad: un gesto = una diapositiva, y solo si no hay nada que desplazar
+  function instalarRueda() {
+    var acumulado = 0, ultimoEvento = 0, ultimaNav = 0, bloqueado = false;
+    W.addEventListener('wheel', function (e) {
+      if (estado.indiceAbierto || e.ctrlKey) return;
+      var ahora = Date.now();
+      var dy = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (e.deltaMode === 1) dy *= 32; else if (e.deltaMode === 2) dy *= 600;
+      if (bloqueado) {
+        if (ahora - ultimoEvento > 260 && ahora - ultimaNav > 900) bloqueado = false;
+        else { ultimoEvento = ahora; return; }
+      }
+      if (ahora - ultimoEvento > 240) acumulado = 0;
+      ultimoEvento = ahora;
+      var cont = desplazable(e.target, dy);
+      if (cont) { acumulado = 0; return; }
+      acumulado += dy;
+      if (Math.abs(acumulado) > 48) {
+        if (acumulado > 0) siguiente(); else anterior();
+        acumulado = 0; bloqueado = true; ultimaNav = ahora;
+      }
+    }, { passive: true });
+  }
+  // ¿Hay un contenedor que todavía puede desplazarse en esa dirección?
+  function desplazable(t, dy) {
+    var n = t && t.nodeType === 1 ? t : null;
+    while (n && n !== raiz && n !== D.body) {
+      if (n.scrollHeight > n.clientHeight + 2) {
+        var oy = getComputedStyle(n).overflowY;
+        if (oy === 'auto' || oy === 'scroll') {
+          if (dy > 0 && n.scrollTop + n.clientHeight < n.scrollHeight - 2) return n;
+          if (dy < 0 && n.scrollTop > 2) return n;
+        }
+      }
+      n = n.parentElement;
+    }
+    return null;
+  }
+
+  // Deslizar con el dedo: horizontal y con umbral; no toca el desplazamiento vertical
+  function instalarDeslizar() {
+    var x0 = 0, y0 = 0, t0 = 0, activo = false;
+    D.addEventListener('touchstart', function (e) {
+      if (e.touches.length !== 1 || estado.indiceAbierto) { activo = false; return; }
+      var t = e.target;
+      if (t.closest && t.closest('[data-sin-deslizar],.barra')) { activo = false; return; }
+      activo = true; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+    }, { passive: true });
+    D.addEventListener('touchend', function (e) {
+      if (!activo) return;
+      activo = false;
+      var t = e.changedTouches[0];
+      var dx = t.clientX - x0, dy = t.clientY - y0, dt = Date.now() - t0;
+      if (dt > 900 || Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+      if (dx < 0) siguiente(); else anterior();
+    }, { passive: true });
+    D.addEventListener('touchcancel', function () { activo = false; }, { passive: true });
+  }
+
+  // ═══ Inclinación con el cursor ══════════════════════════════
+  var incl = { elementos: [], x: -1, y: -1, corriendo: false, dentro: false };
+  function instalarInclinacion() {
+    if (mqTactil.matches || sinAnimar()) return;
+    W.addEventListener('pointermove', function (e) {
+      if (e.pointerType === 'touch') return;
+      incl.x = e.clientX; incl.y = e.clientY; incl.dentro = true;
+      arrancarInclinacion();
+    }, { passive: true });
+    D.addEventListener('pointerleave', function () { incl.dentro = false; arrancarInclinacion(); });
+    W.addEventListener('blur', function () { incl.dentro = false; arrancarInclinacion(); });
+  }
+  function prepararInclinacionDiapo(s) {
+    incl.elementos.forEach(function (o) { o.el.style.removeProperty('--incl-x'); o.el.style.removeProperty('--incl-y'); });
+    incl.elementos = [];
+    if (mqTactil.matches || sinAnimar() || movimientoReducido()) return;
+    s.querySelectorAll('[data-inclinar]').forEach(function (e) {
+      var max = parseFloat(e.getAttribute('data-inclinar'));
+      incl.elementos.push({ el: e, max: isNaN(max) || max <= 0 ? 8 : max, rx: 0, ry: 0 });
+    });
+    arrancarInclinacion();
+  }
+  function arrancarInclinacion() {
+    if (incl.corriendo || !incl.elementos.length) return;
+    incl.corriendo = true;
+    requestAnimationFrame(cuadroInclinacion);
+  }
+  function cuadroInclinacion() {
+    var activo = false;
+    var vw = W.innerWidth, vh = W.innerHeight;
+    incl.elementos.forEach(function (o) {
+      var tx = 0, ty = 0;
+      if (incl.dentro && !movimientoReducido()) {
+        var r = o.el.getBoundingClientRect();
+        var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        var nx = Math.max(-1, Math.min(1, (incl.x - cx) / Math.max(r.width * 0.75, vw * 0.3)));
+        var ny = Math.max(-1, Math.min(1, (incl.y - cy) / Math.max(r.height * 0.75, vh * 0.3)));
+        ty = nx * o.max; tx = -ny * o.max;
+      }
+      o.rx += (tx - o.rx) * 0.085;
+      o.ry += (ty - o.ry) * 0.085;
+      if (Math.abs(tx - o.rx) > 0.01 || Math.abs(ty - o.ry) > 0.01) activo = true;
+      o.el.style.setProperty('--incl-x', o.rx.toFixed(3) + 'deg');
+      o.el.style.setProperty('--incl-y', o.ry.toFixed(3) + 'deg');
+    });
+    if (activo) requestAnimationFrame(cuadroInclinacion); else incl.corriendo = false;
+  }
+
+  // ═══ Pantallas a tamaño nativo ══════════════════════════════
+  var observador = null;
+  function prepararPantallas(contexto) {
+    var ps = contexto.querySelectorAll('.pantalla[data-ancho][data-alto]');
+    if (!ps.length) return;
+    if (!observador && W.ResizeObserver) {
+      observador = new ResizeObserver(function (entradas) {
+        entradas.forEach(function (en) { escalarHijas(en.target); });
+      });
+    }
+    ps.forEach(function (p) {
+      p.style.width = (parseFloat(p.getAttribute('data-ancho')) || 390) + 'px';
+      p.style.height = (parseFloat(p.getAttribute('data-alto')) || 844) + 'px';
+      var padre = p.parentElement;
+      if (padre && !padre.__pantallaObservada) {
+        padre.__pantallaObservada = true;
+        if (getComputedStyle(padre).position === 'static') padre.style.position = 'relative';
+        if (observador) observador.observe(padre);
+      }
+    });
+    recalcularPantallas();
+  }
+  function escalarHijas(padre) {
+    var w = padre.clientWidth, h = padre.clientHeight;
+    if (!w) return;
+    Array.prototype.forEach.call(padre.children, function (p) {
+      if (!p.classList || !p.classList.contains('pantalla') || !p.hasAttribute('data-ancho')) return;
+      var a = parseFloat(p.getAttribute('data-ancho')), al = parseFloat(p.getAttribute('data-alto'));
+      var s = h > 0 ? Math.min(w / a, h / al) : w / a;
+      p.style.setProperty('--escala', s.toFixed(5));
+      p.style.setProperty('--pantalla-x', ((w - a * s) / 2).toFixed(2) + 'px');
+      p.style.setProperty('--pantalla-y', (h > 0 ? (h - al * s) / 2 : 0).toFixed(2) + 'px');
+    });
+  }
+  function escalarPantallasDe(s) {
+    s.querySelectorAll('.pantalla[data-ancho]').forEach(function (p) { if (p.parentElement) escalarHijas(p.parentElement); });
+  }
+  function recalcularPantallas() {
+    if (!raiz) return;
+    raiz.querySelectorAll('.pantalla[data-ancho]').forEach(function (p) { if (p.parentElement) escalarHijas(p.parentElement); });
+  }
+
+  // ═══ ?qa — revisión de desbordes por diapositiva ════════════
+  function ejecutarQA() {
+    var vw = W.innerWidth, vh = W.innerHeight;
+    var horizontal = vw > vh;
+    var scrollPermitido = !(horizontal && vw >= 1024);
+    var reporte = {
+      viewport: { ancho: vw, alto: vh, dpr: W.devicePixelRatio || 1 },
+      total: registro.length, errores: 0, avisos: 0, diapositivas: [],
+      erroresGlobales: erroresGlobales.slice()
+    };
+    reporte.errores += reporte.erroresGlobales.length;
+    var actualAntes = estado.indice;
+    for (var i = 0; i < registro.length; i++) {
+      var r = { n: i + 1, id: registro[i].id, titulo: registro[i].titulo, tema: registro[i].tema, errores: [], avisos: [] };
+      try {
+        mostrar(i, 'adelante', { instantaneo: true, forzar: true });
+        revisarDiapo(i, r, vw, vh, scrollPermitido);
+      } catch (err) {
+        r.errores.push('La revisión falló: ' + err.message);
+      }
+      reporte.diapositivas.push(r);
+    }
+    // Se sale de la última para que su alSalir también quede revisado
+    var ultima = registro.length - 1, volver = actualAntes < 0 ? 0 : actualAntes;
+    if (ultima > 0 && volver === ultima) mostrar(0, 'atras', { instantaneo: true, forzar: true });
+    mostrar(volver, 'adelante', { instantaneo: true, forzar: true });
+    reporte.diapositivas.forEach(function (r, i) {
+      (erroresRender[i] || []).forEach(function (m) { r.errores.push('Error de la diapositiva → ' + m); });
+      reporte.errores += r.errores.length;
+      reporte.avisos += r.avisos.length;
+    });
+    W.__QA__ = reporte;
+    escribirResultado('qa-resultado', reporte);
+  }
+
+  function describir(e) {
+    var s = e.tagName.toLowerCase();
+    if (e.id) s += '#' + e.id;
+    var cls = typeof e.className === 'string' ? e.className : (e.className && e.className.baseVal) || '';
+    cls = cls.trim().split(/\s+/).filter(Boolean).filter(function (c) { return c !== 'paso-visible'; }).slice(0, 3);
+    if (cls.length) s += '.' + cls.join('.');
+    var t = (e.textContent || '').replace(/\s+/g, ' ').trim();
+    if (t) s += ' «' + (t.length > 46 ? t.slice(0, 45) + '…' : t) + '»';
+    return s;
+  }
+
+  function revisarDiapo(i, r, vw, vh, scrollPermitido) {
+    var s = diapos[i];
+    var c = s.querySelector('.diapo__contenido');
+    void s.offsetWidth;
+    // Desborde del contenido
+    if (c.scrollWidth > c.clientWidth + 1) r.errores.push('El contenido se desborda a lo ancho (' + (c.scrollWidth - c.clientWidth) + 'px)');
+    var sobraAlto = c.scrollHeight - c.clientHeight;
+    var hayScroll = sobraAlto > 1;
+    if (hayScroll) {
+      var m = 'El contenido se desborda a lo alto (' + sobraAlto + 'px)';
+      if (scrollPermitido) r.avisos.push(m + '; se desplaza dentro de la diapositiva');
+      else r.errores.push(m);
+    }
+    // Imágenes rotas
+    s.querySelectorAll('img').forEach(function (im) {
+      if (im.complete && im.naturalWidth === 0) r.errores.push('Imagen que no carga: ' + (im.getAttribute('src') || '(sin src)'));
+    });
+
+    var barraR = modos.sinBarra || !barra ? null : barra.getBoundingClientRect();
+    var marcados = [];
+    var cacheRecorte = new Map();
+    var textosChicos = 0;
+    var revisar = function (permitirVertical) {
+      var todos = c.querySelectorAll('*');
+      for (var k = 0; k < todos.length; k++) {
+        var e = todos[k];
+        if (e.closest('[data-decorativo]') || e.closest('.pantalla') && !e.classList.contains('pantalla')) continue;
+        if (e.closest('.telefono__boton,.telefono__isla,.telefono__brillo,.telefono__inicio,.laptop__camara,.tableta__camara')) continue;
+        if (marcados.some(function (m) { return m.contains(e); })) continue;
+        var cs = getComputedStyle(e);
+        if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
+        var rect = e.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) continue;
+        var v = recorteVisible(e, rect, c, cacheRecorte);
+        if (!v) continue;
+        var fuera = [];
+        if (v.left < -1) fuera.push('izquierda ' + Math.round(-v.left) + 'px');
+        if (v.right > vw + 1) fuera.push('derecha ' + Math.round(v.right - vw) + 'px');
+        if (!permitirVertical) {
+          if (v.top < -1) fuera.push('arriba ' + Math.round(-v.top) + 'px');
+          if (v.bottom > vh + 1) fuera.push('abajo ' + Math.round(v.bottom - vh) + 'px');
+        }
+        if (fuera.length) {
+          r.errores.push('Se sale de la pantalla (' + fuera.join(', ') + '): ' + describir(e));
+          marcados.push(e); continue;
+        }
+        if (barraR && v.left < barraR.right && v.right > barraR.left && v.top < barraR.bottom - 1 && v.bottom > barraR.top + 1) {
+          r.errores.push('Queda debajo de la barra inferior (' + Math.round(v.bottom - barraR.top) + 'px): ' + describir(e));
+          marcados.push(e); continue;
+        }
+      }
+    };
+    if (!hayScroll) revisar(false);
+    else {
+      // Con desplazamiento: se revisa lo horizontal arriba y el final contra la barra abajo
+      c.scrollTop = c.scrollHeight;
+      revisar(true);
+      c.scrollTop = 0;
+    }
+    // Texto demasiado chico (fuera de las pantallas de dispositivo)
+    c.querySelectorAll('*').forEach(function (e) {
+      if (textosChicos >= 4 || e.closest('.pantalla') || e.closest('[data-decorativo]')) return;
+      var tieneTexto = false;
+      for (var n = e.firstChild; n; n = n.nextSibling) if (n.nodeType === 3 && n.nodeValue.trim()) { tieneTexto = true; break; }
+      if (!tieneTexto) return;
+      var cs = getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      var fs = parseFloat(cs.fontSize);
+      if (fs < 12) { r.avisos.push('Texto de ' + fs.toFixed(1) + 'px (menos de 12px): ' + describir(e)); textosChicos++; }
+    });
+  }
+
+  // Rectángulo visible de e, recortado por los ancestros con overflow distinto de visible
+  function recorteVisible(e, rect, tope, cache) {
+    var v = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+    var a = e.parentElement;
+    while (a && a !== tope.parentElement) {
+      var clip = cache.get(a);
+      if (clip === undefined) {
+        var cs = getComputedStyle(a);
+        clip = (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') ? a.getBoundingClientRect() : null;
+        if (a === tope) clip = null; // el contenido se revisa aparte
+        cache.set(a, clip);
+      }
+      if (clip) {
+        v.left = Math.max(v.left, clip.left); v.top = Math.max(v.top, clip.top);
+        v.right = Math.min(v.right, clip.right); v.bottom = Math.min(v.bottom, clip.bottom);
+        if (v.right <= v.left || v.bottom <= v.top) return null;
+      }
+      a = a.parentElement;
+    }
+    return v;
+  }
+
+  function escribirResultado(id, datos) {
+    var pre = D.getElementById(id);
+    if (!pre) { pre = el('pre', 'resultado-modo', { id: id, 'aria-hidden': 'true' }); D.body.appendChild(pre); }
+    pre.textContent = JSON.stringify(datos, null, 2);
+  }
+
+  // ═══ ?autoprueba — prueba funcional integrada ═══════════════
+  function esperar(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function tecla(k, extra) {
+    var o = { key: k, bubbles: true, cancelable: true };
+    if (extra) for (var p in extra) o[p] = extra[p];
+    D.dispatchEvent(new KeyboardEvent('keydown', o));
+  }
+  function ejecutarAutoprueba() {
+    var pruebas = [];
+    var anotar = function (nombre, ok, detalle) { pruebas.push({ nombre: nombre, ok: !!ok, detalle: detalle || '' }); };
+    var total = registro.length;
+    var estadoAria = function () {
+      var bien = true, det = '';
+      diapos.forEach(function (s, i) {
+        var activa = i === estado.indice;
+        var inerte = s.hasAttribute('inert'), oculta = s.getAttribute('aria-hidden') === 'true';
+        if (activa === inerte || activa === oculta) { bien = false; det += ' #' + (i + 1) + (activa ? ' activa con inert/aria-hidden' : ' inactiva sin inert/aria-hidden'); }
+        var esperado = (i + 1) + ' de ' + total + ': ' + registro[i].titulo;
+        if (s.getAttribute('aria-label') !== esperado) { bien = false; det += ' #' + (i + 1) + ' aria-label'; }
+      });
+      return { ok: bien, detalle: det.trim() };
+    };
+    var hashEs = function (i) { return location.hash === '#/' + registro[i].id; };
+
+    var correr = async function () {
+      if (!total) { anotar('Hay diapositivas registradas', false); return; }
+      anotar('Hay diapositivas registradas', true, total + ' diapositivas');
+      ir(0); if (estado.indice !== 0) mostrar(0, 'atras', { instantaneo: true });
+      await esperar(20);
+      anotar('Arranca en la 1 con el hash correcto', estado.indice === 0 && hashEs(0), location.hash);
+      var a = estadoAria(); anotar('Estado ARIA: solo la actual es accesible y las etiquetas dicen «N de T: Título»', a.ok, a.detalle);
+      anotar('La barra muestra el contador', /01/.test(refsBarra.contador.textContent), refsBarra.contador.textContent);
+      anotar('El botón anterior está desactivado en la primera', refsBarra.anterior.disabled === true);
+
+      // Avance con teclado (respeta pasos)
+      var pasos0 = registro[0]._pasos;
+      for (var p = 0; p < pasos0; p++) tecla('ArrowRight');
+      anotar('→ revela los pasos de la primera antes de avanzar', estado.indice === 0 && estado.paso === pasos0, 'paso ' + estado.paso + '/' + pasos0);
+      tecla('ArrowRight');
+      if (total > 1) {
+        anotar('→ avanza a la 2', estado.indice === 1, 'actual ' + (estado.indice + 1));
+        anotar('El hash sigue a la diapositiva', hashEs(1), location.hash);
+        a = estadoAria(); anotar('Estado ARIA tras avanzar', a.ok, a.detalle);
+        await esperar(80);
+        anotar('La región viva anuncia el cambio', /Diapositiva 2 de/.test(vivo.textContent), vivo.textContent);
+        tecla('ArrowLeft');
+        anotar('← regresa a la 1', estado.indice === 0, 'actual ' + (estado.indice + 1));
+        var antesI = estado.indice, antesP = estado.paso;
+        tecla(' ');
+        anotar('Espacio avanza', estado.indice > antesI || estado.paso > antesP, 'actual ' + (estado.indice + 1) + ', paso ' + estado.paso);
+      }
+      tecla('End');
+      anotar('Fin lleva a la última', estado.indice === total - 1, 'actual ' + (estado.indice + 1));
+      anotar('El botón siguiente se desactiva al final', refsBarra.siguiente.disabled === (estado.paso >= registro[total - 1]._pasos));
+      tecla('Home');
+      anotar('Inicio lleva a la primera', estado.indice === 0);
+      tecla('PageDown');
+      anotar('AvPág avanza', total === 1 || estado.indice === 1 || estado.paso === 1);
+      tecla('Home');
+
+      // Índice
+      refsBarra.indice.focus();
+      tecla('i');
+      anotar('I abre el índice', estado.indiceAbierto && indiceEl.classList.contains('indice--abierto') && !indiceEl.hasAttribute('inert'));
+      anotar('El foco entra al índice', indiceEl.contains(D.activeElement), D.activeElement && D.activeElement.className);
+      anotar('La tarjeta actual dice «Estás aquí»', !!indiceEl.querySelector('.indice__tarjeta--actual[data-ir="0"]'));
+      anotar('El escenario queda inerte con el índice abierto', escenario.hasAttribute('inert'));
+      tecla('ArrowDown');
+      anotar('Las flechas mueven el foco entre tarjetas', D.activeElement === tarjetasIndice[Math.min(1, total - 1)]);
+      tecla('Escape');
+      anotar('Esc cierra el índice', !estado.indiceAbierto && indiceEl.hasAttribute('inert'));
+      anotar('El foco regresa al botón del índice', D.activeElement === refsBarra.indice, D.activeElement && D.activeElement.className);
+      if (total > 2) {
+        abrirIndice();
+        tarjetasIndice[2].click();
+        anotar('Una tarjeta del índice salta y cierra', estado.indice === 2 && !estado.indiceAbierto, 'actual ' + (estado.indice + 1));
+      }
+      // Traza
+      if (total > 1) {
+        refsBarra.nodos[total - 1].click();
+        anotar('Un nodo de la traza salta a su diapositiva', estado.indice === total - 1);
+        anotar('El nodo actual queda marcado', refsBarra.nodos[total - 1].classList.contains('traza__nodo--actual'));
+      }
+      // Hash
+      if (total > 3) {
+        location.hash = '#/' + registro[3].id;
+        await esperar(80);
+        anotar('#/id lleva a la diapositiva', estado.indice === 3, location.hash + ' → ' + (estado.indice + 1));
+        location.hash = '#/2';
+        await esperar(80);
+        anotar('#/2 (número, base 1) lleva a la 2', estado.indice === 1, location.hash + ' → ' + (estado.indice + 1));
+      }
+      // Pasos
+      var conPasos = -1;
+      for (var i = 0; i < total; i++) if (registro[i]._pasos > 0 && i < total - 1) { conPasos = i; break; }
+      if (conPasos >= 0) {
+        var max = registro[conPasos]._pasos, s = diapos[conPasos];
+        ir(conPasos);
+        if (estado.indice !== conPasos) mostrar(conPasos, 'adelante', { forzar: true });
+        var visibles = function () { return s.querySelectorAll('[data-paso].paso-visible').length; };
+        var totalPasos = s.querySelectorAll('[data-paso]').length;
+        anotar('Al entrar hacia adelante los pasos están ocultos', estado.paso === 0 && visibles() === 0, visibles() + ' visibles');
+        tecla('ArrowRight');
+        anotar('→ revela un paso sin cambiar de diapositiva', estado.indice === conPasos && estado.paso === 1 && visibles() > 0);
+        tecla('ArrowLeft');
+        anotar('← oculta el último paso', estado.indice === conPasos && estado.paso === 0 && visibles() === 0);
+        for (var q = 0; q < max; q++) tecla('ArrowRight');
+        tecla('ArrowRight');
+        anotar('Tras el último paso, → avanza', estado.indice === conPasos + 1);
+        tecla('ArrowLeft');
+        anotar('Regresar desde la siguiente muestra todos los pasos', estado.indice === conPasos && estado.paso === max && visibles() === totalPasos, visibles() + '/' + totalPasos);
+      } else {
+        anotar('Pasos (no hay diapositivas con data-paso)', true, 'omitido');
+      }
+      // Teclas dentro de campos
+      var campo = el('input', '', { type: 'text' });
+      raiz.appendChild(campo);
+      var antes = estado.indice;
+      campo.focus();
+      campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      anotar('Las teclas se ignoran al escribir en un campo', estado.indice === antes);
+      campo.remove();
+      // Evento
+      var recibido = null;
+      var oyente = function (ev) { recibido = ev.detail; };
+      D.addEventListener('presentacion:cambio', oyente);
+      ir(0);
+      D.removeEventListener('presentacion:cambio', oyente);
+      anotar('Se emite presentacion:cambio con {indice, id, direccion}', !!recibido && recibido.indice === 0 && recibido.id === registro[0].id && !!recibido.direccion, JSON.stringify(recibido));
+      // Pantalla completa
+      anotar('El botón de pantalla completa sigue la disponibilidad', refsBarra.pantalla.hidden === !pantallaCompletaDisponible());
+      // Errores de render
+      var errs = Object.keys(erroresRender);
+      anotar('Ninguna diapositiva lanzó errores', errs.length === 0, errs.map(function (k) { return '#' + (+k + 1) + ': ' + erroresRender[k].join('; '); }).join(' | '));
+      // Pantallas escaladas
+      var malas = 0;
+      diapos[estado.indice].querySelectorAll('.pantalla[data-ancho]').forEach(function (p) {
+        if (!(parseFloat(p.style.getPropertyValue('--escala')) > 0)) malas++;
+      });
+      anotar('Las pantallas nativas de la diapositiva actual tienen escala', malas === 0, malas + ' sin escala');
+    };
+    correr().catch(function (err) { anotar('La autoprueba terminó sin excepciones', false, err && err.stack || String(err)); })
+      .then(function () {
+        var fallas = pruebas.filter(function (p) { return !p.ok; });
+        var res = { ok: fallas.length === 0, total: pruebas.length, fallas: fallas.length, pruebas: pruebas };
+        W.__AUTOPRUEBA__ = res;
+        escribirResultado('autoprueba-resultado', res);
+      });
+  }
+
+  // ═══ Exportar ═══════════════════════════════════════════════
+  W.Presentacion = {
+    diapositiva: diapositiva,
+    iniciar: iniciar,
+    ir: ir,
+    siguiente: siguiente,
+    anterior: anterior,
+    actual: actual,
+    abrirIndice: abrirIndice,
+    cerrarIndice: function () { cerrarIndice(true); },
+    modos: modos,
+    version: '1.0.0'
+  };
+})();

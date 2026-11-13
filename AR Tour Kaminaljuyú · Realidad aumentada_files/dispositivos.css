@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════════
+   Dispositivos en CSS (sin imágenes)
+   .telefono · .laptop · .navegador · .ventana · .tableta
+   + .escena-3d · .flotar · .abanico
+   Lo móvil va en un teléfono; lo web, en una laptop o un navegador.
+   La pantalla de cada uno es una .pantalla[data-ancho][data-alto]
+   escrita a tamaño nativo; el motor la escala. Las piezas decorativas
+   (isla, botones, cámara, base, brillo) las agrega el motor solo.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══ TELÉFONO ═══
+   <div class="telefono" data-ui="clara" style="--ancho:300px">
+     <div class="telefono__pantalla">
+       <div class="pantalla" data-ancho="390" data-alto="844">
+         <div class="estado"></div> …app…
+       </div>
+     </div>
+   </div>                                                         */
+.telefono{
+  --ancho:300px;
+  --marco:calc(var(--ancho)*.0135);
+  --bisel:calc(var(--ancho)*.027);
+  --pt:calc((var(--ancho) - 2*var(--marco) - 2*var(--bisel)) / 390);
+  --radio-pantalla:calc(var(--pt)*55);
+  --metal-1:#5B5F66; --metal-2:#2B2E33; --metal-3:#7A7E86; --metal-4:#1F2125;
+  position:relative;flex:none;width:var(--ancho);padding:var(--marco);
+  border-radius:calc(var(--radio-pantalla) + var(--bisel) + var(--marco));
+  background:
+    linear-gradient(135deg,var(--metal-3) 0%,var(--metal-2) 18%,var(--metal-1) 46%,var(--metal-4) 74%,var(--metal-3) 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.14),
+    inset 0 1px 1px rgba(255,255,255,.35),
+    inset 0 0 calc(var(--marco)*.9) rgba(0,0,0,.55),
+    0 1px 1px rgba(0,0,0,.18),
+    0 calc(var(--ancho)*.04) calc(var(--ancho)*.08) calc(var(--ancho)*-.02) rgba(0,0,0,.32),
+    0 calc(var(--ancho)*.14) calc(var(--ancho)*.28) calc(var(--ancho)*-.06) rgba(0,0,0,.42);
+  color:#111}
+.telefono--plata{--metal-1:#E4E6EA;--metal-2:#B9BDC4;--metal-3:#F6F7F9;--metal-4:#9EA3AB}
+.telefono--claro-sombra{box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.14),inset 0 1px 1px rgba(255,255,255,.35),inset 0 0 calc(var(--marco)*.9) rgba(0,0,0,.55),
+    0 1px 1px rgba(60,48,30,.14),0 calc(var(--ancho)*.05) calc(var(--ancho)*.1) calc(var(--ancho)*-.03) rgba(60,48,30,.28),
+    0 calc(var(--ancho)*.16) calc(var(--ancho)*.3) calc(var(--ancho)*-.08) rgba(60,48,30,.30)}
+.telefono__pantalla{position:relative;box-sizing:content-box;
+  width:calc(var(--ancho) - 2*var(--marco) - 2*var(--bisel));aspect-ratio:390/844;
+  border:var(--bisel) solid #040405;border-radius:calc(var(--radio-pantalla) + var(--bisel));
+  overflow:hidden;background:#000;isolation:isolate;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.9)}
+.telefono__pantalla>.pantalla{border-radius:0}
+.telefono__isla{position:absolute;z-index:6;left:50%;top:calc(var(--pt)*11);
+  width:calc(var(--pt)*125);height:calc(var(--pt)*36.5);transform:translateX(-50%);
+  border-radius:999px;background:#000;
+  box-shadow:inset 0 0 0 calc(var(--pt)*.6) rgba(255,255,255,.03)}
+.telefono__isla::after{content:'';position:absolute;right:calc(var(--pt)*12);top:50%;
+  width:calc(var(--pt)*11);height:calc(var(--pt)*11);margin-top:calc(var(--pt)*-5.5);border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#2b3a5a 0%,#0b0f18 55%,#000 70%)}
+.telefono__inicio{position:absolute;z-index:6;left:50%;bottom:calc(var(--pt)*8);
+  width:calc(var(--pt)*136);height:calc(var(--pt)*5);transform:translateX(-50%);border-radius:99px;
+  background:rgba(0,0,0,.82)}
+.telefono[data-ui="oscura"] .telefono__inicio{background:rgba(255,255,255,.9)}
+.telefono__brillo{position:absolute;inset:0;z-index:7;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(118deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,.05) 30%,rgba(255,255,255,0) 31%,rgba(255,255,255,0) 100%)}
+[data-tema="ink"] .telefono__brillo{mix-blend-mode:screen}
+.telefono__boton{position:absolute;width:calc(var(--ancho)*.012);border-radius:2px;
+  background:linear-gradient(90deg,var(--metal-4),var(--metal-1) 60%,var(--metal-2));
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12)}
+.telefono__boton--accion{left:calc(var(--ancho)*-.009);top:17%;height:5%}
+.telefono__boton--volumen-arriba{left:calc(var(--ancho)*-.009);top:25%;height:8.6%}
+.telefono__boton--volumen-abajo{left:calc(var(--ancho)*-.009);top:35.5%;height:8.6%}
+.telefono__boton--encendido{right:calc(var(--ancho)*-.009);top:28%;height:13.5%}
+
+/* Barra de estado (dentro de la .pantalla, a tamaño nativo). El motor la llena. */
+.estado{position:relative;z-index:5;height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:6px 30px 0 52px;font-family:var(--f-texto);font-size:17px;font-weight:600;letter-spacing:-.01em;
+  color:currentColor}
+.estado__hora{font-variant-numeric:tabular-nums}
+.estado__iconos{display:flex;align-items:center;gap:6px}
+.estado__iconos svg{display:block;height:12px;width:auto;fill:currentColor}
+.estado__iconos svg:last-child{height:13px}
+.estado--claro{color:#fff}
+.estado--oscuro{color:#000}
+
+/* ═══ LAPTOP ═══
+   <div class="laptop" style="--ancho:820px">
+     <div class="laptop__tapa"><div class="laptop__pantalla">
+       <div class="pantalla" data-ancho="1440" data-alto="900">…</div>
+     </div></div>
+   </div>                                                         */
+.laptop{
+  --ancho:820px;
+  --l-alu-1:#3A3E45; --l-alu-2:#202328; --l-borde:rgba(255,255,255,.10);
+  --l-base-1:#4A4E56; --l-base-2:#2A2D33; --l-base-3:#15171A;
+  position:relative;flex:none;width:var(--ancho);color:#111}
+.laptop--plata{--l-alu-1:#D9DCE1;--l-alu-2:#B4B8BF;--l-borde:rgba(255,255,255,.5);
+  --l-base-1:#E6E8EC;--l-base-2:#B9BDC4;--l-base-3:#80858D}
+.laptop__tapa{position:relative;width:87.5%;margin:0 auto;padding:calc(var(--ancho)*.004);
+  border-radius:calc(var(--ancho)*.021) calc(var(--ancho)*.021) calc(var(--ancho)*.004) calc(var(--ancho)*.004);
+  background:linear-gradient(180deg,var(--l-alu-1),var(--l-alu-2));
+  box-shadow:inset 0 0 0 1px var(--l-borde),0 calc(var(--ancho)*.02) calc(var(--ancho)*.05) calc(var(--ancho)*-.02) rgba(0,0,0,.35)}
+.laptop__pantalla{position:relative;box-sizing:content-box;aspect-ratio:1440/900;overflow:hidden;background:#000;isolation:isolate;
+  border:solid #060708;border-width:calc(var(--ancho)*.017) calc(var(--ancho)*.012) calc(var(--ancho)*.019);
+  border-radius:calc(var(--ancho)*.018) calc(var(--ancho)*.018) calc(var(--ancho)*.002) calc(var(--ancho)*.002)}
+.laptop__camara{position:absolute;z-index:3;left:50%;top:calc(var(--ancho)*.004 + var(--ancho)*.0085);
+  width:calc(var(--ancho)*.0062);height:calc(var(--ancho)*.0062);transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 40% 40%,#2c3a55,#07090d 70%);box-shadow:0 0 0 1px #121418}
+.laptop__brillo{background:linear-gradient(112deg,rgba(255,255,255,.08) 0%,rgba(255,255,255,.025) 34%,rgba(255,255,255,0) 35%)}
+.laptop__base{position:relative;width:100%;height:calc(var(--ancho)*.024);margin-top:-1px;
+  border-radius:calc(var(--ancho)*.003) calc(var(--ancho)*.003) calc(var(--ancho)*.026) calc(var(--ancho)*.026) / calc(var(--ancho)*.003) calc(var(--ancho)*.003) calc(var(--ancho)*.02) calc(var(--ancho)*.02);
+  background:linear-gradient(180deg,var(--l-base-1) 0%,var(--l-base-2) 38%,var(--l-base-3) 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 1px rgba(0,0,0,.4),
+    0 calc(var(--ancho)*.03) calc(var(--ancho)*.05) calc(var(--ancho)*-.012) rgba(0,0,0,.5)}
+.laptop__base::before{content:'';position:absolute;left:50%;top:0;width:15%;height:42%;transform:translateX(-50%);
+  border-radius:0 0 calc(var(--ancho)*.008) calc(var(--ancho)*.008);
+  background:linear-gradient(180deg,rgba(0,0,0,.38),rgba(0,0,0,.12));box-shadow:inset 0 -1px 0 rgba(255,255,255,.12)}
+.laptop__base::after{content:'';position:absolute;left:6%;right:6%;top:100%;height:calc(var(--ancho)*.05);
+  background:radial-gradient(ellipse 50% 40% at 50% 0,rgba(0,0,0,.45),transparent 70%);pointer-events:none}
+
+/* Laptop en 3/4: la tapa se inclina hacia atrás y la base se vuelve cubierta con teclado.
+   No le pongas data-anim ni opacidad a .laptop--3d (aplana el 3D): anima su contenedor. */
+.laptop--3d{transform-style:preserve-3d;
+  transform:perspective(2600px) rotateX(-16deg) rotateY(var(--giro,-20deg));
+  padding-bottom:calc(var(--ancho)*.2)}
+.laptop--3d .laptop__tapa{width:100%;transform-origin:50% 100%;transform:rotateX(24deg);transform-style:preserve-3d}
+.laptop--3d .laptop__tapa::after{content:'';position:absolute;left:7%;right:7%;bottom:calc(var(--ancho)*-.009);
+  height:calc(var(--ancho)*.012);border-radius:0 0 calc(var(--ancho)*.004) calc(var(--ancho)*.004);
+  background:linear-gradient(180deg,#0c0d10,#2a2d33 55%,#0c0d10)}
+.laptop--3d .laptop__base{position:absolute;left:0;top:calc(100% - var(--ancho)*.2);height:calc(var(--ancho)*.6);margin-top:0;
+  transform-origin:50% 0;transform:rotateX(90deg);
+  transform-style:preserve-3d;border-radius:calc(var(--ancho)*.004) calc(var(--ancho)*.004) calc(var(--ancho)*.03) calc(var(--ancho)*.03);
+  --tecla-hueco:var(--l-base-2);
+  background:
+    /* panel táctil */
+    linear-gradient(rgba(255,255,255,.06),rgba(255,255,255,.035)) 50% 90%/38% 27% no-repeat,
+    /* barra espaciadora */
+    linear-gradient(#111215,#111215) 50% 49%/30% 7% no-repeat,
+    /* teclado: huecos verticales y horizontales sobre las teclas */
+    repeating-linear-gradient(90deg,var(--tecla-hueco) 0 calc(var(--ancho)*.004),transparent calc(var(--ancho)*.004) calc(var(--ancho)*.0485)) 50% 12%/78% 46% no-repeat,
+    repeating-linear-gradient(180deg,var(--tecla-hueco) 0 calc(var(--ancho)*.004),transparent calc(var(--ancho)*.004) calc(var(--ancho)*.046)) 50% 12%/78% 46% no-repeat,
+    linear-gradient(#111215,#111215) 50% 12%/78% 46% no-repeat,
+    linear-gradient(180deg,var(--l-base-2),var(--l-base-1) 60%,var(--l-base-2));
+  box-shadow:inset 0 0 0 1px var(--l-borde)}
+.laptop--3d .laptop__base::before{top:auto;bottom:0;left:0;right:0;width:auto;height:calc(var(--ancho)*.018);
+  transform-origin:50% 100%;transform:rotateX(-90deg);
+  border-radius:0 0 calc(var(--ancho)*.03) calc(var(--ancho)*.03);
+  background:linear-gradient(180deg,var(--l-base-2),var(--l-base-3));box-shadow:none}
+.laptop--3d .laptop__base::after{left:-4%;right:-4%;top:6%;height:100%;transform:translateZ(calc(var(--ancho)*-.04)) scale(1.05);
+  background:radial-gradient(ellipse 50% 50% at 50% 50%,rgba(0,0,0,.65),transparent 70%);filter:none}
+
+/* ═══ NAVEGADOR (se escribe a tamaño nativo, dentro de una .pantalla) ═══ */
+.navegador{display:flex;flex-direction:column;width:100%;height:100%;background:#fff;color:#14171C;
+  font-family:var(--f-texto)}
+.navegador__barra{flex:none;height:52px;display:flex;align-items:center;gap:18px;padding:0 18px;
+  background:#EEF0F3;border-bottom:1px solid #DADDE2}
+.navegador__puntos{display:flex;gap:8px;flex:none}
+.navegador__puntos i{width:12px;height:12px;border-radius:50%;background:#FF5F57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.15)}
+.navegador__puntos i:nth-child(2){background:#FEBC2E}
+.navegador__puntos i:nth-child(3){background:#28C840}
+.navegador__pestana{flex:none;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:9px;
+  background:#fff;font-size:13px;font-weight:500;color:#30343B;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.navegador__pestana::before{content:'';width:14px;height:14px;border-radius:4px;background:var(--accent)}
+.navegador__direccion{flex:1;max-width:560px;margin:0 auto;height:32px;border-radius:9px;background:#fff;
+  border:1px solid #DADDE2;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#5B616B}
+.navegador__direccion::before{content:'';width:9px;height:7px;border:1.5px solid #8A9099;border-radius:2px;margin-top:4px;
+  box-shadow:0 -5px 0 -2px transparent}
+.navegador__contenido{flex:1;position:relative;overflow:hidden;min-height:0}
+.navegador--oscuro{background:#0F1217;color:#E8EAEE}
+.navegador--oscuro .navegador__barra{background:#1A1E25;border-color:#262B34}
+.navegador--oscuro .navegador__pestana,.navegador--oscuro .navegador__direccion{background:#232831;color:#AEB4BE;border-color:#2C323C}
+
+/* Ventana suelta: marco con sombra para una .pantalla (por ejemplo, con un .navegador dentro) */
+.ventana{--ancho:800px;position:relative;flex:none;width:var(--ancho);aspect-ratio:var(--proporcion,1440/900);
+  border-radius:calc(var(--ancho)*.014);overflow:hidden;isolation:isolate;background:#fff;
+  box-shadow:0 0 0 1px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08),
+    0 calc(var(--ancho)*.03) calc(var(--ancho)*.06) calc(var(--ancho)*-.02) rgba(0,0,0,.3),
+    0 calc(var(--ancho)*.09) calc(var(--ancho)*.16) calc(var(--ancho)*-.05) rgba(0,0,0,.35)}
+[data-tema="ink"] .ventana{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 1px 2px rgba(0,0,0,.3),
+    0 calc(var(--ancho)*.03) calc(var(--ancho)*.06) calc(var(--ancho)*-.02) rgba(0,0,0,.5),
+    0 calc(var(--ancho)*.09) calc(var(--ancho)*.16) calc(var(--ancho)*-.05) rgba(0,0,0,.6)}
+
+/* ═══ TABLETA ═══ */
+.tableta{--ancho:440px;--t-marco:calc(var(--ancho)*.011);--t-bisel:calc(var(--ancho)*.034);
+  position:relative;flex:none;width:var(--ancho);padding:var(--t-marco);border-radius:calc(var(--ancho)*.062);
+  background:linear-gradient(135deg,#6A6E76,#34373D 30%,#575B62 60%,#26282C);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),inset 0 1px 1px rgba(255,255,255,.3),
+    0 calc(var(--ancho)*.04) calc(var(--ancho)*.09) calc(var(--ancho)*-.02) rgba(0,0,0,.4),
+    0 calc(var(--ancho)*.12) calc(var(--ancho)*.22) calc(var(--ancho)*-.06) rgba(0,0,0,.4)}
+.tableta--plata{background:linear-gradient(135deg,#F2F3F5,#C4C8CE 30%,#E2E4E8 60%,#A9AEB5)}
+.tableta__pantalla{position:relative;box-sizing:content-box;width:calc(var(--ancho) - 2*var(--t-marco) - 2*var(--t-bisel));
+  aspect-ratio:820/1180;border:var(--t-bisel) solid #050506;border-radius:calc(var(--ancho)*.05);overflow:hidden;background:#000;isolation:isolate}
+.tableta--horizontal .tableta__pantalla{aspect-ratio:1180/820}
+.tableta__camara{position:absolute;z-index:3;left:50%;top:calc(var(--t-marco) + var(--t-bisel)*.5);width:calc(var(--ancho)*.012);
+  height:calc(var(--ancho)*.012);transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 40%,#2c3a55,#07090d 70%)}
+.tableta--horizontal .tableta__camara{left:calc(var(--t-marco) + var(--t-bisel)*.5);top:50%}
+
+/* ═══ ESCENAS 3D ═══ */
+.escena-3d{position:relative;perspective:var(--perspectiva,1800px);perspective-origin:50% 40%;transform-style:preserve-3d}
+.flotar{animation:prs-flotar var(--flotar-dur,8s) ease-in-out infinite}
+.flotar--lento{--flotar-dur:11s}
+@keyframes prs-flotar{0%,100%{translate:0 0}50%{translate:0 calc(var(--u)*-1.1)}}
+
+/* Abanico de 2 o 3 teléfonos */
+.abanico{display:grid;place-items:center;position:relative}
+.abanico>*{grid-area:1/1}
+.abanico>:nth-child(2){z-index:2}
+.abanico>:nth-child(1){transform:translate3d(-58%,5%,0) rotate(-8deg) scale(.9)}
+.abanico>:nth-child(3){transform:translate3d(58%,5%,0) rotate(8deg) scale(.9)}
+.abanico--dos>:nth-child(1){transform:translate3d(-30%,3%,0) rotate(-6deg)}
+.abanico--dos>:nth-child(2){transform:translate3d(30%,-3%,0) rotate(5deg)}
+
+@media (prefers-reduced-motion:reduce){
+  .flotar{animation:none}
+}

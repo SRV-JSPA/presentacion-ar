@@ -1,0 +1,111 @@
+/* 12 · Ficha — a la izquierda el titular y el corte talud-tablero (Teotihuacán contra Kaminaljuyú);
+   a la derecha el teléfono en la capa RA con la hoja de la ficha que sube con resorte. */
+.diapo[data-id="ficha"] .ficha{display:grid;grid-template-columns:minmax(0,60fr) minmax(0,40fr);align-items:center;gap:var(--e-4)}
+.diapo[data-id="ficha"] .ficha__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-4);position:relative;z-index:2;min-width:0}
+.diapo[data-id="ficha"] .cabeza .titular{max-width:16ch;font-size:calc(var(--u)*3.9)}
+
+/* ── El corte ── */
+.diapo[data-id="ficha"] .ficha__diagrama{position:relative;width:min(100%,calc(var(--alto-util)*.98));aspect-ratio:760/392}
+.diapo[data-id="ficha"] .ficha__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.diapo[data-id="ficha"] #ficha-mortero circle{fill:var(--barro-claro)}
+.diapo[data-id="ficha"] .ficha__masa{fill:url(#ficha-mortero);stroke:none;opacity:.9}
+.diapo[data-id="ficha"] .ficha__piedra{fill:#F6ECD8;stroke:var(--barro);stroke-width:1.15}
+.diapo[data-id="ficha"] .ficha__perfil{fill:none;stroke:var(--barro-hondo);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
+.diapo[data-id="ficha"] .ficha__quiebre{fill:none;stroke:var(--barro);stroke-width:1.2;stroke-linejoin:round}
+.diapo[data-id="ficha"] .ficha__suelo{stroke:var(--barro-hondo);stroke-width:1.6}
+/* Las cotas son la capa: lo que la ficha agrega a lo que se ve */
+.diapo[data-id="ficha"] .ficha__ext line{stroke:var(--oro-trazo);stroke-width:1;stroke-dasharray:3 4;opacity:.75}
+.diapo[data-id="ficha"] .ficha__cota line{stroke:var(--oro-trazo);stroke-width:2;stroke-linecap:round}
+.diapo[data-id="ficha"] .ficha__cota{transform-box:fill-box;transform-origin:50% 100%}
+
+.diapo[data-id="ficha"] .ficha__num{position:absolute;translate:-100% -50%;display:flex;flex-direction:column;align-items:flex-end;line-height:1;
+  font-family:var(--f-mono);color:var(--acento);white-space:nowrap}
+.diapo[data-id="ficha"] .ficha__num b{font-size:calc(var(--u)*2.5);font-weight:500;letter-spacing:-.02em}
+.diapo[data-id="ficha"] .ficha__num i{font-style:normal;font-size:var(--t-etiqueta);letter-spacing:.1em;text-transform:uppercase;color:var(--texto-mute);margin-top:.35em}
+.diapo[data-id="ficha"] .ficha__lugar{position:absolute;margin:0;display:flex;align-items:baseline;gap:.7em;white-space:nowrap}
+.diapo[data-id="ficha"] .ficha__lugar b{font-size:var(--t-lead);font-weight:700;letter-spacing:-.01em;color:var(--texto)}
+.diapo[data-id="ficha"] .ficha__lugar--kmj b{color:var(--app)}
+.diapo[data-id="ficha"] .ficha__lugar span{font-family:var(--f-mono);font-size:var(--t-chico);font-weight:500;color:var(--acento)}
+.diapo[data-id="ficha"] .ficha__pie{margin:0;font-family:var(--f-mono);font-size:var(--t-etiqueta);line-height:1.5;color:var(--texto-mute);max-width:62ch}
+
+/* ── El teléfono ── */
+.diapo[data-id="ficha"] .ficha__escena{position:relative;height:var(--alto-util);display:flex;align-items:center;justify-content:flex-end;padding-right:calc(var(--u)*1);
+  --tel:min(calc(var(--u)*19.5),calc(var(--alto-util)*.47))}
+.diapo[data-id="ficha"] .ficha__telefono{--ancho:var(--tel)}
+.diapo[data-id="ficha"] .ficha__ra{position:absolute;left:0;right:0;top:118px;height:300px;z-index:2}
+.diapo[data-id="ficha"] .ficha__hud{position:absolute;left:0;top:52%;color:var(--texto-mute);white-space:normal;max-width:calc(100% - var(--tel) - var(--u)*4)}
+.diapo[data-id="ficha"] .ficha__hud>div+div{margin-top:.5em}
+.diapo[data-id="ficha"] .ficha__hud b{color:var(--acento)}
+/* el toque sobre Info (botón de 56 pt en la tarjeta derecha) */
+.diapo[data-id="ficha"] .ficha__toque{position:absolute;right:28px;top:71px;width:56px;height:56px;border-radius:50%;z-index:14;pointer-events:none;
+  border:3px solid rgba(255,255,255,.9);opacity:0}
+
+/* ═══ Animación propia ═══
+   1. La cámara ve el modelo; se toca Info.  2. La hoja sube con resorte (sobrepasa y se asienta).
+   3. Los perfiles se trazan, las piedras se asientan por hiladas.  4. Las cotas doradas se extienden midiendo. */
+.diapo[data-id="ficha"].anim-activa .ficha__toque{animation:ficha-toque 700ms var(--ease-expo) 900ms both}
+@keyframes ficha-toque{0%{opacity:0;scale:1.6}35%{opacity:1;scale:.92}100%{opacity:0;scale:1.25}}
+.diapo[data-id="ficha"].anim-activa .app-ra__boton--info{animation:ficha-pulsa 420ms ease-out 1050ms both}
+@keyframes ficha-pulsa{50%{scale:.86}}
+.diapo[data-id="ficha"].anim-activa .app-velo{animation:prs-aparecer 500ms ease-out 1150ms both}
+.diapo[data-id="ficha"].anim-activa .app-hoja{animation:ficha-resorte 1250ms linear 1150ms both}
+@keyframes ficha-resorte{
+  0%{transform:translateY(100%)} 22%{transform:translateY(-5.5%)} 38%{transform:translateY(2.4%)}
+  54%{transform:translateY(-1.1%)} 70%{transform:translateY(.45%)} 85%{transform:translateY(-.15%)} 100%{transform:translateY(0)}}
+.diapo[data-id="ficha"].anim-activa .app-hoja__contenido>*{animation:prs-subir 700ms var(--ease-expo) both}
+.diapo[data-id="ficha"].anim-activa .app-hoja__titulo{animation-delay:1500ms}
+.diapo[data-id="ficha"].anim-activa .app-hoja__foto{animation-delay:1600ms}
+.diapo[data-id="ficha"].anim-activa .app-hoja__texto{animation-delay:1700ms}
+
+.diapo[data-id="ficha"].anim-activa .ficha__masa{animation:prs-aparecer 900ms ease-out both;animation-delay:calc(1300ms + var(--k)*260ms)}
+.diapo[data-id="ficha"].anim-activa .ficha__piedra{animation:ficha-hilada 520ms var(--ease-expo) both;
+  animation-delay:calc(1250ms + var(--h)*70ms)}
+.diapo[data-id="ficha"].anim-activa .ficha__corte--kmj .ficha__piedra{animation-delay:calc(1510ms + var(--h)*70ms)}
+@keyframes ficha-hilada{from{opacity:0;transform:translateY(-9px)}to{opacity:1;transform:none}}
+.diapo[data-id="ficha"].anim-activa .ficha__ext{animation:prs-aparecer 600ms ease-out both;animation-delay:calc(2100ms + var(--k)*380ms)}
+.diapo[data-id="ficha"].anim-activa .ficha__cota--talud{animation:ficha-mide 620ms var(--ease-expo) both;animation-delay:calc(2200ms + var(--k)*380ms)}
+.diapo[data-id="ficha"].anim-activa .ficha__cota--tablero{animation:ficha-mide 820ms var(--ease-expo) both;animation-delay:calc(2480ms + var(--k)*380ms)}
+@keyframes ficha-mide{from{transform:scaleY(0)}to{transform:none}}
+.diapo[data-id="ficha"] .ficha__cota--tablero{transform-origin:50% 100%}
+.diapo[data-id="ficha"].anim-activa .ficha__num{animation:ficha-num 600ms var(--ease-expo) both}
+.diapo[data-id="ficha"].anim-activa .ficha__num--talud.ficha__num--teo{animation-delay:2550ms}
+.diapo[data-id="ficha"].anim-activa .ficha__num--tablero.ficha__num--teo{animation-delay:2950ms}
+.diapo[data-id="ficha"].anim-activa .ficha__num--talud.ficha__num--kmj{animation-delay:2930ms}
+.diapo[data-id="ficha"].anim-activa .ficha__num--tablero.ficha__num--kmj{animation-delay:3330ms}
+@keyframes ficha-num{from{opacity:0;translate:-80% -50%}to{opacity:1;translate:-100% -50%}}
+.diapo[data-id="ficha"].anim-activa .ficha__lugar{animation:prs-subir 800ms var(--ease-expo) both}
+.diapo[data-id="ficha"].anim-activa .ficha__lugar--teo{animation-delay:1000ms}
+.diapo[data-id="ficha"].anim-activa .ficha__lugar--kmj{animation-delay:1260ms}
+
+@media (orientation:landscape) and (max-width:1500px){
+  .diapo[data-id="ficha"] .ficha__hud{display:none}
+}
+
+/* Captura y movimiento reducido: todo en su sitio */
+.modo-captura .diapo[data-id="ficha"] *{animation:none!important}
+.modo-captura .diapo[data-id="ficha"] .ficha__toque{display:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="ficha"].anim-activa .app-hoja,.diapo[data-id="ficha"].anim-activa .ficha__piedra,
+  .diapo[data-id="ficha"].anim-activa .ficha__cota--talud,.diapo[data-id="ficha"].anim-activa .ficha__cota--tablero,
+  .diapo[data-id="ficha"].anim-activa .app-hoja__contenido>*,.diapo[data-id="ficha"].anim-activa .ficha__num,
+  .diapo[data-id="ficha"].anim-activa .ficha__lugar,.diapo[data-id="ficha"].anim-activa .app-ra__boton--info{animation:prs-aparecer 300ms both}
+  .diapo[data-id="ficha"] .ficha__toque{display:none}
+}
+
+/* Vertical: titular, el corte a todo el ancho, el pie y el teléfono recortado (se ve la hoja) */
+@media (orientation:portrait){
+  .diapo[data-id="ficha"] .ficha{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-6)}
+  .diapo[data-id="ficha"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="ficha"] .ficha__diagrama{width:100%;margin-top:var(--e-2)}
+  .diapo[data-id="ficha"] .ficha__num b{font-size:max(18px,calc(var(--u)*3.4))}
+  .diapo[data-id="ficha"] .ficha__num i{display:none}
+  .diapo[data-id="ficha"] .ficha__diagrama{margin-bottom:calc(var(--u)*3.5)}
+  .diapo[data-id="ficha"] .ficha__lugar{flex-direction:column;gap:.15em}
+  .diapo[data-id="ficha"] .ficha__lugar b{font-size:var(--t-texto)}
+  .diapo[data-id="ficha"] .ficha__escena{height:auto;flex-direction:column;gap:var(--e-3);--tel:min(78vw,440px)}
+  .diapo[data-id="ficha"] .ficha__escena{padding-right:0;justify-content:flex-start}
+  .diapo[data-id="ficha"] .ficha__hud{position:relative;left:auto;top:auto;max-width:none;align-self:flex-start;order:-1}
+  .diapo[data-id="ficha"] .ficha__telefono-caja{height:calc(var(--tel)*1.3);overflow:hidden;display:flex;align-items:flex-end;width:calc(var(--tel) + 12px);
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 22%);mask-image:linear-gradient(180deg,transparent 0,#000 22%)}
+  .diapo[data-id="ficha"] .ficha__telefono{margin:0 auto}
+}

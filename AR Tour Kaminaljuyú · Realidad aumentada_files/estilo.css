@@ -1,0 +1,170 @@
+/* ═══════════════════════════════════════════════════════════════
+   Concepto visual: «La capa que falta»
+   ───────────────────────────────────────────────────────────────
+   La presentación se lee como un levantamiento arqueológico: papel
+   crema, curvas de nivel, retícula con coordenadas y rótulos de
+   estructura («C-II-4»). Sobre ese levantamiento, la capa aumentada
+   se dibuja en ORO: alambre, retículas de cámara, anillos de GPS y la
+   línea de escaneo que sube. Terracota = la app y el sitio. Olivo =
+   resuelto. Carmesí = solo lo perdido.
+
+   Aquí va lo compartido: el fondo, la barra, el índice y los motivos.
+   Lo de una sola diapositiva va en diapositivas/NN-id.css.
+   Guía para construir diapositivas: componentes/LEEME.md
+   ═══════════════════════════════════════════════════════════════ */
+
+:root{
+  /* Alto útil de una diapositiva horizontal, entre el margen de arriba y la barra */
+  --alto-util:calc(100vh - var(--margen-arriba) - var(--reserva-abajo));
+  --transicion:1050ms;
+}
+
+body{font-feature-settings:normal}
+.icono{display:block;width:1em;height:1em;flex:none}
+
+/* ── Sin logo: esta presentación no lleva marca ── */
+.barra__marca,.barra__sep{display:none!important}
+.barra__info{gap:0}
+
+/* ═══ FONDO: el suelo del levantamiento ═══════════════════════
+   El suelo en perspectiva del motor lleva una retícula fina y, encima,
+   un mosaico de curvas de nivel (Curvas.instalar pone --curvas-fondo). */
+.presentacion[data-tema="ink"]{--fondo-linea:#2C241C;--fondo-horizonte:rgba(230,186,98,.18)}
+.presentacion[data-tema="bone"]{--fondo-linea:#DCC8A2;--fondo-horizonte:rgba(185,132,36,.14)}
+.fondo__suelo{background-image:linear-gradient(currentColor 1px,transparent 1px),linear-gradient(90deg,currentColor 1px,transparent 1px);
+  background-size:13vh 13vh}
+.fondo__suelo::before{content:'';position:absolute;inset:0;background:currentColor;filter:brightness(1.35);
+  -webkit-mask-image:var(--curvas-fondo,linear-gradient(transparent,transparent));
+          mask-image:var(--curvas-fondo,linear-gradient(transparent,transparent));
+  -webkit-mask-size:78vh 78vh;mask-size:78vh 78vh}
+.presentacion[data-tema="bone"] .fondo__suelo::before{filter:brightness(.9)}
+.fondo__cielo{opacity:.28}
+.fondo__brillo{background:radial-gradient(circle,rgba(230,186,98,.12) 0%,transparent 60%)}
+.fondo__brillo--bone{background:radial-gradient(circle,rgba(255,250,236,.85) 0%,transparent 60%)}
+
+/* ── Barra e índice en la paleta propia ── */
+.presentacion[data-tema="bone"] .traza__nodo--actual::after{box-shadow:0 0 0 1px var(--acento),0 0 0 4px rgba(185,132,36,.18)}
+.traza__tip b{color:var(--oro)}
+.indice__velo{background:radial-gradient(120% 80% at 15% 0%,rgba(230,186,98,.12),transparent 55%),rgba(23,19,15,.96)!important}
+.indice__velo::after{background-image:linear-gradient(#2C241C 1px,transparent 1px),linear-gradient(90deg,#2C241C 1px,transparent 1px)!important}
+.indice__tarjeta:hover,.indice__tarjeta:focus-visible{border-color:rgba(230,186,98,.45);background-color:rgba(230,186,98,.08)}
+.indice__tarjeta--actual{border-color:rgba(230,186,98,.55);background:rgba(230,186,98,.1)}
+.indice__seccion h3 span{color:#6E6152}
+.indice__num{color:#7A6C5B}
+:focus-visible{outline-color:var(--oro)}
+
+/* ═══ PIEZAS COMUNES ═══════════════════════════════════════════ */
+
+/* Cabecera estándar (Deck.cabeza) */
+.cabeza{display:flex;flex-direction:column;gap:var(--e-2);align-items:flex-start;position:relative;z-index:2}
+.cabeza .titular{max-width:22ch}
+
+/* Fuente al pie (Deck.fuente) */
+.fuente{position:relative;z-index:2;margin:var(--e-3) 0 0;font-family:var(--f-mono);font-size:var(--t-etiqueta);
+  line-height:1.45;color:var(--texto-mute);max-width:90ch}
+.fuente__ref{color:var(--acento)}
+
+/* Lista con nodos de levantamiento: una idea por línea */
+.lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e-2)}
+.lista>li{position:relative;display:flex;align-items:baseline;gap:var(--e-2);font-size:var(--t-texto);line-height:1.4;color:var(--texto-2);font-weight:500}
+.lista>li::before{content:'';flex:none;width:.56em;height:.56em;border-radius:50%;translate:0 -.08em;
+  border:max(1.5px,calc(var(--u)*.12)) solid var(--oro-tema);box-shadow:0 0 0 .26em color-mix(in srgb,var(--oro-tema) 14%,transparent)}
+.lista b,.lista strong{color:var(--texto);font-weight:700}
+.lista .k{font-family:var(--f-mono);font-weight:500;font-size:.92em;color:var(--acento);letter-spacing:.01em}
+.lista--app>li::before{border-color:var(--app);box-shadow:0 0 0 .26em color-mix(in srgb,var(--app) 14%,transparent)}
+.lista--ok>li::before{border-color:var(--resuelto);background:var(--resuelto)}
+.lista--grande>li{font-size:var(--t-lead)}
+
+/* Tarjeta: panel del levantamiento */
+.tarjeta{position:relative;background:var(--vidrio);border:1px solid var(--vidrio-borde);border-radius:var(--r-3);padding:var(--e-3)}
+.tarjeta__t{margin:0;font-family:var(--f-titular);font-weight:700;font-size:var(--t-3);line-height:1.14;letter-spacing:-.02em}
+.tarjeta__d{margin:.4em 0 0;font-size:var(--t-texto);line-height:1.4;color:var(--texto-2)}
+.tarjeta--oro{border-color:color-mix(in srgb,var(--oro-tema) 45%,transparent)}
+
+/* HUD: lecturas de la capa aumentada, en mono */
+.hud{font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:400;letter-spacing:.06em;line-height:1.55;
+  color:var(--texto-mute);text-transform:uppercase;white-space:nowrap}
+.hud b{font-weight:500;color:var(--acento)}
+.hud i{font-style:normal;color:var(--texto)}
+.hud--claro{color:var(--texto-2)}
+
+/* Fórmula en mono, enmarcada por las esquinas de la cámara */
+.formula{position:relative;display:inline-block;margin:0;padding:.85em 1.15em;font-family:var(--f-mono);font-size:var(--t-chico);
+  font-weight:500;line-height:1.5;color:var(--texto);letter-spacing:0;
+  background:color-mix(in srgb,var(--oro-tema) 7%,transparent)}
+.formula b{color:var(--acento);font-weight:500}
+.formula small{font-size:max(12px,.92em);color:var(--texto-mute)}
+.formula>.esquinas{--esq-tam:.8em}
+
+/* Esquinas de retícula de cámara (corchetes dorados). Motivos.esquinas() */
+.esquinas{position:absolute;inset:0;pointer-events:none;color:var(--oro-tema);--esq-tam:calc(var(--u)*2);--esq-grosor:max(1.5px,calc(var(--u)*.12))}
+.esquinas>i{position:absolute;width:var(--esq-tam);height:var(--esq-tam);border:var(--esq-grosor) solid currentColor}
+.esquinas>i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}
+.esquinas>i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
+.esquinas>i:nth-child(3){right:0;bottom:0;border-left:0;border-top:0}
+.esquinas>i:nth-child(4){left:0;bottom:0;border-right:0;border-top:0}
+.esquinas--mira::after{content:'';position:absolute;left:50%;top:50%;width:calc(var(--esq-tam)*.7);height:calc(var(--esq-tam)*.7);
+  translate:-50% -50%;background:linear-gradient(currentColor,currentColor) center/100% var(--esq-grosor) no-repeat,
+  linear-gradient(currentColor,currentColor) center/var(--esq-grosor) 100% no-repeat;opacity:.7}
+
+/* Rótulo de estructura del levantamiento: «C-II-4 · Acrópolis». Motivos.rotulo() */
+.rotulo{display:inline-flex;align-items:center;gap:.7em;padding:.42em .75em;border:1px solid color-mix(in srgb,var(--texto) 28%,transparent);
+  border-radius:3px;font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:400;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--texto-2);background:color-mix(in srgb,var(--fondo) 70%,transparent);white-space:nowrap;line-height:1.2}
+.rotulo b{font-weight:500;color:var(--texto);letter-spacing:.04em}
+.rotulo--oro{border-color:color-mix(in srgb,var(--oro-tema) 60%,transparent)}
+.rotulo--oro b{color:var(--acento)}
+.rotulo--app b{color:var(--app)}
+
+/* Línea de escaneo dorada: --escaneo de 0 (abajo) a 1 (arriba). Motivos.escaneo() */
+.escaneo{position:absolute;left:0;right:0;top:calc((1 - var(--escaneo,1)) * 100%);height:2px;margin-top:-1px;pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,transparent,var(--oro) 10%,var(--oro) 90%,transparent);
+  box-shadow:0 0 12px 1px color-mix(in srgb,var(--oro) 70%,transparent),0 0 46px 6px color-mix(in srgb,var(--oro) 22%,transparent)}
+.escaneo::after{content:'';position:absolute;left:8%;right:8%;top:100%;height:calc(var(--u)*7);
+  background:linear-gradient(color-mix(in srgb,var(--oro) 16%,transparent),transparent)}
+.escaneo--subir{animation:escaneo-subir var(--escaneo-dur,2.4s) var(--ease-escaneo) both}
+@keyframes escaneo-subir{from{top:100%;opacity:0}8%{opacity:1}88%{opacity:1}to{top:0%;opacity:0}}
+
+/* Retícula del levantamiento con rótulos de coordenadas. Motivos.reticula() */
+.reticula{position:absolute;inset:0;pointer-events:none;color:var(--trama-color);
+  background-image:linear-gradient(currentColor 1px,transparent 1px),linear-gradient(90deg,currentColor 1px,transparent 1px);
+  background-size:calc(100% / var(--cols,8)) calc(100% / var(--filas,5));background-position:-1px -1px}
+.reticula__x,.reticula__y{position:absolute;font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.06em;color:var(--texto-mute);
+  white-space:nowrap;line-height:1}
+.reticula__x{top:calc(-1.6em);translate:-50% 0}
+.reticula__y{left:calc(-.6em);translate:-100% -50%}
+
+/* Curvas de nivel (Curvas.svg): el color lo da currentColor */
+.curvas{display:block;width:100%;height:100%;color:var(--curva-color)}
+.curvas-capa{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+/* Visor 3D (componentes/visor3d.js): el host define el tamaño */
+.visor{position:relative}
+.visor__lienzo{position:absolute;inset:0;width:100%;height:100%;display:block}
+.visor--interactivo .visor__lienzo{cursor:grab}
+.visor--arrastrando .visor__lienzo{cursor:grabbing}
+
+/* Nodo suelto (un punto de levantamiento) */
+.nodo{display:inline-block;width:.6em;height:.6em;border-radius:50%;background:var(--oro-tema);
+  box-shadow:0 0 0 .3em color-mix(in srgb,var(--oro-tema) 20%,transparent)}
+
+/* Esqueleto: diapositiva todavía sin construir */
+.en-construccion{display:inline-flex;align-self:flex-start;align-items:center;gap:.8em;margin-top:var(--e-5);padding:.7em 1.1em;border:1px dashed var(--linea);
+  border-radius:var(--r-1);font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.14em;text-transform:uppercase;color:var(--texto-mute)}
+.en-construccion::before{content:'';width:.6em;height:.6em;border-radius:50%;border:1.5px solid currentColor}
+.esqueleto__pieza{margin-top:var(--e-3);font-family:var(--f-mono);font-size:var(--t-chico);color:var(--texto-mute);max-width:70ch;line-height:1.5}
+
+/* Canvas que llena su caja */
+.escena{position:relative;width:100%;height:100%;min-height:0}
+.escena>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* En teléfono, las diapositivas se desplazan: las piezas no deben pedir alto de pantalla */
+@media (orientation:portrait) and (max-width:719px){
+  .cabeza .titular{max-width:none}
+}
+
+/* Con movimiento reducido o en capturas, nada se queda a medio camino */
+.modo-captura .solo-animado{display:none!important}
+@media (prefers-reduced-motion:reduce){
+  .escaneo--subir{animation:none;opacity:0}
+}

@@ -1,0 +1,159 @@
+/* 10 · Modelos — bone. Visor 3D interactivo con los dos modelos del recorrido de hoy: Monticulo7.obj
+   (Montículo C-II-6) y Monticulo12.obj (Acrópolis C-II-4), los .obj reales de Assets/Models/. Al cambiar
+   de pestaña el modelo actual se desarma y el nuevo se arma por triángulos (de abajo hacia arriba) mientras
+   el contador de vértices y triángulos sube a la par. Arrastrar gira e inclina; rueda o pellizco escala
+   de 0,1× a 5×, como los gestos de la app (ARViewController.swift:691-704; ARConfig.swift:7-8). */
+(function () {
+  var MODELOS = [
+    { clave: 'm7', codigo: 'C-II-6', nombre: 'Montículo', archivo: 'Monticulo7.obj', v: 156, t: 178, giro: .8, incl: .55, encuadre: 1.12 },
+    { clave: 'm12', codigo: 'C-II-4', nombre: 'Acrópolis', archivo: 'Monticulo12.obj', v: 1746, t: 2604, giro: 2.35, incl: .5, encuadre: 1.08 }
+  ];
+  var el0 = null, visores = [null, null], actual = 0, cancelarConteo = null, relojes = [];
+
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function tactil() { return !!(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches); }
+
+  function visor(i) {
+    if (visores[i]) return visores[i];
+    var m = MODELOS[i];
+    visores[i] = Visor3D.crear(el0.querySelector('.mod__visor[data-i="' + i + '"]'), {
+      modelo: m.clave, tono: 'bone', niveles: 10, giro: m.giro, inclinacion: m.incl, velocidad: .12,
+      encuadre: m.encuadre, escalar: true, interactivo: true, grosor: 1.3, grosorCurvas: 1.2
+    });
+    return visores[i];
+  }
+
+  function ficha(i, e) {
+    var m = MODELOS[i];
+    el0.querySelector('.mod__archivo').textContent = m.archivo;
+    el0.querySelector('.mod__v').textContent = miles(Math.round(m.v * e));
+    el0.querySelector('.mod__t').textContent = miles(Math.round(m.t * e));
+    el0.querySelector('.mod__barra i').style.transform = 'scaleX(' + e.toFixed(3) + ')';
+  }
+  function rotulo(i) {
+    var m = MODELOS[i], r = el0.querySelector('.mod__rotulo');
+    r.innerHTML = Motivos.rotulo(m.codigo, m.nombre, 'rotulo--oro');
+  }
+  function pestanas(i) {
+    el0.querySelectorAll('.mod__tab').forEach(function (b, k) {
+      b.setAttribute('aria-selected', k === i ? 'true' : 'false');
+      b.tabIndex = k === i ? 0 : -1;
+    });
+    el0.querySelectorAll('.mod__visor').forEach(function (h, k) { h.classList.toggle('mod__visor--activo', k === i); });
+    el0.setAttribute('data-modelo', i);
+    var panel = el0.querySelector('.mod__escena'); if (panel) panel.setAttribute('aria-labelledby', 'mod-tab-' + i);
+  }
+  function limpiar() {
+    if (cancelarConteo) { cancelarConteo(); cancelarConteo = null; }
+    relojes.forEach(clearTimeout); relojes = [];
+  }
+
+  /* Arma el modelo i por triángulos; el contador sube con él */
+  function armar(i, retraso) {
+    var v = visor(i);
+    v.medir();
+    if (Deck.quieto()) { v.final({ curvas: .12 }); ficha(i, 1); return; }
+    v.cancelar();
+    v.ahora({ armar: 0, alambre: 0, curvas: .5, dibujo: 1, bajo: .32, corte: 1, opacidad: 1, zoom: 1 });
+    v.estado({ armar: 1 }, { ms: 2300, retraso: retraso || 0, curva: 'suave' });
+    v.estado({ alambre: 1 }, { ms: 900, retraso: (retraso || 0) + 1700, curva: 'suave' });
+    v.estado({ curvas: .12 }, { ms: 900, retraso: (retraso || 0) + 1900, curva: 'suave' });
+    v.iniciar();
+    ficha(i, 0);
+    relojes.push(setTimeout(function () {
+      cancelarConteo = Deck.tween(2300, function (e) { ficha(i, e); }, null, 'suave');
+    }, retraso || 0));
+  }
+
+  function elegir(i) {
+    if (i === actual || !el0) return;
+    limpiar();
+    var previo = actual, vp = visores[previo];
+    actual = i;
+    pestanas(i); rotulo(i);
+    if (Deck.quieto()) { if (vp) vp.detener(); armar(i); return; }
+    /* el anterior se desarma rápido (cae por triángulos) mientras el nuevo empieza a armarse */
+    if (vp) {
+      vp.cancelar();
+      vp.estado({ armar: 0, alambre: 0 }, { ms: 520, curva: 'entra', alFin: function () { vp.detener(); } });
+    }
+    el0.classList.add('mod--cambio');
+    relojes.push(setTimeout(function () { el0.classList.remove('mod--cambio'); }, 700));
+    armar(i, 260);
+  }
+
+  Presentacion.diapositiva({
+    id: 'modelos',
+    titulo: 'Modelos 3D',
+    seccion: 'Realidad aumentada',
+    tema: 'bone',
+    transicion: 'escaneo',
+    resumen: 'Montículo C-II-6 y Acrópolis C-II-4, para girar',
+    html: `
+      <div class="lienzo mod" data-modelo="0">
+        <div class="mod__texto">
+          ${Deck.cabeza('Modelos 3D', 'Reconstrucciones en 3D que el visitante puede girar.')}
+          <div class="mod__tabs" role="tablist" aria-label="Modelo" data-anim="subir" style="--retraso:280ms">
+            <button class="mod__tab" role="tab" id="mod-tab-0" aria-controls="mod-panel" aria-selected="true" data-i="0" type="button">
+              <span class="mod__tab-n">Montículo C-II-6</span><span class="mod__tab-a">Monticulo7.obj</span></button>
+            <button class="mod__tab" role="tab" id="mod-tab-1" aria-controls="mod-panel" aria-selected="false" tabindex="-1" data-i="1" type="button">
+              <span class="mod__tab-n">Acrópolis C-II-4</span><span class="mod__tab-a">Monticulo12.obj</span></button>
+          </div>
+          <div class="mod__ficha-caja" data-anim="subir" style="--retraso:380ms">
+          <dl class="mod__ficha">
+            <div><dt>Archivo</dt><dd class="mod__archivo">Monticulo7.obj</dd></div>
+            <div><dt>Vértices</dt><dd class="mod__v">156</dd></div>
+            <div><dt>Triángulos</dt><dd class="mod__t">178</dd></div>
+          </dl>
+          <span class="mod__barra" aria-hidden="true"><i></i></span>
+          </div>
+          <ul class="lista mod__gestos" data-anim-grupo="subir" data-intervalo="110" style="--retraso:480ms">
+            <li><span><b>Arrastrar:</b> girar y subir</span></li>
+            <li><span><b>Pellizcar:</b> escala de <span class="k">0,1×</span> a <span class="k">5×</span></span></li>
+          </ul>
+          <p class="mod__nota" data-anim="aparecer" style="--retraso:700ms">Modelados en Blender · 8 en el repositorio, 2 en el recorrido actual</p>
+        </div>
+
+        <div class="mod__escena" id="mod-panel" role="tabpanel" aria-labelledby="mod-tab-0" data-anim="escala" style="--retraso:100ms">
+          <div class="mod__marco" data-sin-deslizar>
+            <div class="mod__visor mod__visor--activo" data-i="0"></div>
+            <div class="mod__visor" data-i="1"></div>
+            ${Motivos.esquinas()}
+            <div class="mod__rotulo">${Motivos.rotulo('C-II-6', 'Montículo', 'rotulo--oro')}</div>
+            <div class="mod__hud hud" aria-hidden="true"><div><b>Arrastrar</b> · girar</div><div><b>Rueda</b> · escala</div></div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el.querySelector('.mod');
+      if (!el0.__listo) {
+        el0.__listo = true;
+        var tabs = Array.prototype.slice.call(el0.querySelectorAll('.mod__tab'));
+        tabs.forEach(function (b) {
+          b.addEventListener('click', function () { elegir(+b.getAttribute('data-i')); });
+        });
+        el0.querySelector('.mod__tabs').addEventListener('keydown', function (e) {
+          var k = e.key, i = actual;
+          if (k === 'ArrowRight' || k === 'ArrowDown') i = (actual + 1) % tabs.length;
+          else if (k === 'ArrowLeft' || k === 'ArrowUp') i = (actual + tabs.length - 1) % tabs.length;
+          else if (k === 'Home') i = 0;
+          else if (k === 'End') i = tabs.length - 1;
+          else return;
+          e.preventDefault(); e.stopPropagation();
+          elegir(i); tabs[i].focus();
+        });
+        if (tactil()) el0.querySelector('.mod__hud').innerHTML = '<div><b>Arrastrar</b> · girar</div><div><b>Pellizcar</b> · escala</div>';
+      }
+      limpiar();
+      var previo = visores[1 - actual];
+      if (previo) previo.detener();
+      pestanas(actual); rotulo(actual);
+      armar(actual, Deck.quieto() ? 0 : 650);
+    },
+    alSalir: function () {
+      limpiar();
+      visores.forEach(function (v) { if (v) { v.detener(); v.cancelar(); } });
+    }
+  });
+})();

@@ -1,0 +1,211 @@
+/* 16 · Recorrido — bone. El tour de punta a punta como un sendero en herradura sobre el papel del
+   levantamiento: Menú → Controles (≤ 20 m) → Introducción → C-II-6 → Acrópolis → ✓ → Despedida → Menú.
+   La flecha del visitante lo recorre y enciende cada etapa; el sendero queda pintado con el color del
+   AppState de ese tramo (barro = idle, oro = inTour, olivo = completed) y la fila de abajo se resalta
+   al mismo ritmo (AppState.swift:10-14; startTour al tocar en Controles, completeTour al terminar la
+   Despedida: ContentView.swift:108-116, 171-177). Las compuertas son los botones de la app: el toque
+   a ≤ 20 m, ▶ que coloca el modelo y ⏭ Next, que el visitante aprieta para avanzar
+   (ARViewController.swift:300-365). En horizontal, herradura; en vertical, una sola columna. */
+(function () {
+  var ETAPAS = [
+    { n: 'Menú' },
+    { n: 'Controles', s: '≤ 20 m' },
+    { n: 'Introducción' },
+    { n: 'C-II-6', poi: true },
+    { n: 'Acrópolis', poi: true },
+    { n: '✓', boton: true },
+    { n: 'Despedida' },
+    { n: 'Menú' }
+  ];
+  /* Estado de la app en cada tramo (tramo i va de la etapa i a la i+1) */
+  var ESTADO_TRAMO = ['idle', 'inTour', 'inTour', 'inTour', 'inTour', 'inTour', 'completed'];
+  /* Compuertas: lo que el visitante toca para pasar ese tramo */
+  var COMPUERTAS = { 1: { i: 'hand.tap.fill' }, 2: { i: 'play.fill' }, 3: { i: 'forward.end.fill', t: 'Next' } };
+
+  /* ── Geometría de las dos versiones ── */
+  function ola(a, b, amp, eje) {
+    var dx = (b[0] - a[0]) / 3, dy = (b[1] - a[1]) / 3;
+    var c1 = eje === 'y' ? [a[0] + dx, a[1] + dy + amp] : [a[0] + dx + amp, a[1] + dy];
+    var c2 = eje === 'y' ? [a[0] + 2 * dx, a[1] + 2 * dy - amp] : [a[0] + 2 * dx - amp, a[1] + 2 * dy];
+    return 'M' + a[0] + ' ' + a[1] + ' C' + c1.join(' ') + ', ' + c2.join(' ') + ', ' + b.join(' ');
+  }
+  var MODOS = {
+    h: (function () {
+      var N = [[150, 120], [450, 120], [750, 120], [1050, 120], [1050, 340], [750, 340], [450, 340], [150, 340]];
+      var T = [];
+      for (var i = 0; i < 7; i++) {
+        if (i === 3) T.push('M1050 120 A110 110 0 0 1 1050 340');
+        else T.push(ola(N[i], N[i + 1], i % 2 ? -16 : 16, 'y'));
+      }
+      return {
+        W: 1200, H: 460, N: N, T: T,
+        vuelta: 'M150 340 A110 110 0 0 1 150 120',
+        medio: function (i) { return i === 3 ? [1160, 230] : [(N[i][0] + N[i + 1][0]) / 2, N[i][1]]; },
+        lado: function (k) { return k <= 3 ? 'arriba' : 'abajo'; }
+      };
+    })(),
+    v: (function () {
+      var N = [], T = [];
+      for (var k = 0; k < 8; k++) N.push([62, 52 + k * 104]);
+      for (var i = 0; i < 7; i++) T.push(ola(N[i], N[i + 1], i % 2 ? -22 : 22, 'x'));
+      return {
+        W: 400, H: 832, N: N, T: T,
+        vuelta: 'M62 780 C24 780 16 768 16 738 L16 94 C16 64 24 52 62 52',
+        medio: function (i) { return [(N[i][0] + N[i + 1][0]) / 2, (N[i][1] + N[i + 1][1]) / 2]; },
+        lado: function () { return 'der'; }
+      };
+    })()
+  };
+
+  function pct(v, t) { return (v / t * 100).toFixed(3) + '%'; }
+
+  function escena(m) {
+    var g = MODOS[m], svg = '', html = '';
+    svg += '<path class="rec__vuelta" d="' + g.vuelta + '" marker-end="url(#rec-punta-' + m + ')"/>';
+    g.T.forEach(function (d, i) {
+      svg += '<path class="rec__base" d="' + d + '"/>';
+    });
+    g.T.forEach(function (d, i) {
+      svg += '<path class="rec__tramo rec__tramo--' + ESTADO_TRAMO[i] + '" data-i="' + i + '" d="' + d + '"/>';
+    });
+    g.N.forEach(function (p, k) {
+      if (ETAPAS[k].boton) return;
+      svg += '<g class="rec__nodo" data-k="' + k + '" transform="translate(' + p[0] + ' ' + p[1] + ')">' +
+        '<circle class="rec__nodo-onda" r="13"/><circle class="rec__nodo-aro" r="13"/><circle class="rec__nodo-centro" r="5.5"/></g>';
+    });
+    svg += '<g class="rec__caminante"><circle class="rec__pulso" r="22"/>' +
+      '<path class="rec__flecha" d="M0 -13 L10 11 L0 5.5 L-10 11 Z"/></g>';
+
+    g.N.forEach(function (p, k) {
+      var e = ETAPAS[k], lado = g.lado(k);
+      if (e.boton) {
+        html += '<span class="rec__boton" data-k="' + k + '" style="left:' + pct(p[0], g.W) + ';top:' + pct(p[1], g.H) + '">' + Iconos.svg('checkmark') + '</span>';
+        return;
+      }
+      html += '<span class="rec__et rec__et--' + lado + (e.poi ? ' rec__et--poi' : '') + '" data-k="' + k + '" style="left:' + pct(p[0], g.W) + ';top:' + pct(p[1], g.H) + '">' +
+        (e.poi ? Iconos.svg('mappin', 'rec__pin') : '') + '<b>' + e.n + '</b>' + (e.s ? '<i>' + e.s + '</i>' : '') + '</span>';
+    });
+    Object.keys(COMPUERTAS).forEach(function (i) {
+      var c = COMPUERTAS[i], p = g.medio(+i);
+      html += '<span class="rec__puerta" data-i="' + i + '" style="left:' + pct(p[0], g.W) + ';top:' + pct(p[1], g.H) + '">' + Iconos.svg(c.i) +
+        (c.t ? '<em>' + c.t + '</em>' : '') + '</span>';
+    });
+
+    /* En la herradura, el sendero rodea un montículo: curvas de nivel en barro, muy tenues */
+    var monte = '';
+    if (m === 'h') {
+      var az = Deck.azar(16), fases = [az() * 6.3, az() * 6.3, az() * 6.3];
+      for (var k = 0; k < 7; k++) {
+        var e = 1 - k / 7.6, rx = 345 * e, ry = 74 * e, cx = 600 + k * 9, cy = 232 - k * 1.5, pts = [];
+        for (var j = 0; j < 64; j++) {
+          var a = j / 64 * Math.PI * 2, n = 1 + .05 * Math.sin(3 * a + fases[0] + k * .4) + .03 * Math.sin(5 * a + fases[1]) + .02 * Math.sin(2 * a + fases[2]);
+          pts.push([cx + Math.cos(a) * rx * n, cy + Math.sin(a) * ry * n]);
+        }
+        pts.push(pts[0]);
+        monte += '<path class="rec__curva' + (k % 3 === 2 ? ' rec__curva--maestra' : '') + '" d="' + Curvas.trazo(pts) + 'Z"/>';
+      }
+      monte = '<g class="rec__monte">' + monte + '</g>';
+    }
+    return '<div class="rec__escena rec__escena--' + m + '" data-modo="' + m + '" style="--ar:' + g.W + '/' + g.H + '">' +
+      '<svg class="rec__svg" viewBox="0 0 ' + g.W + ' ' + g.H + '" aria-hidden="true">' +
+      '<defs><marker id="rec-punta-' + m + '" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">' +
+      '<path d="M1 1 L9 5 L1 9" class="rec__punta"/></marker></defs>' + monte + svg + '</svg>' + html + '</div>';
+  }
+
+  /* ── Línea de tiempo: la flecha camina cada tramo y se detiene en cada etapa ── */
+  var el0 = null, b = null, P = 0, horario = [], escenas = [];
+  var INICIO = 650, PAUSA = 430;
+
+  function preparar(el) {
+    escenas = [].slice.call(el.querySelectorAll('.rec__escena')).map(function (s) {
+      var tramos = [].slice.call(s.querySelectorAll('.rec__tramo'));
+      var largos = tramos.map(function (t) { return t.getTotalLength(); });
+      tramos.forEach(function (t, i) { t.style.strokeDasharray = largos[i] + ' ' + (largos[i] + 2); });
+      return {
+        raiz: s, tramos: tramos, largos: largos, cam: s.querySelector('.rec__caminante'),
+        nodos: [].slice.call(s.querySelectorAll('[data-k]')), puertas: [].slice.call(s.querySelectorAll('.rec__puerta'))
+      };
+    });
+    /* el ritmo sale de la versión horizontal (la que se proyecta) */
+    var ref = escenas[0], t = INICIO;
+    horario = ref.largos.map(function (L) {
+      var ms = 420 + L * 2.15, h = { t0: t, t1: t + ms };
+      t += ms + PAUSA;
+      return h;
+    });
+  }
+
+  function suave(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+  function pDeTiempo(ms) {
+    for (var i = 0; i < horario.length; i++) {
+      var h = horario[i];
+      if (ms < h.t0) return i;
+      if (ms <= h.t1) return i + suave((ms - h.t0) / (h.t1 - h.t0));
+    }
+    return horario.length;
+  }
+
+  function pintar() {
+    if (!el0) return;
+    var estado = P <= 1 ? 'idle' : P <= 6 ? 'inTour' : 'completed';
+    escenas.forEach(function (e) {
+      e.tramos.forEach(function (t, i) {
+        var f = Math.max(0, Math.min(1, P - i));
+        t.style.strokeDashoffset = (e.largos[i] * (1 - f)).toFixed(2);
+      });
+      var i = Math.min(6, Math.floor(P)), f = Math.max(0, Math.min(1, P - i));
+      var tr = e.tramos[i], L = e.largos[i];
+      var a = tr.getPointAtLength(L * f), c = tr.getPointAtLength(Math.min(L, L * f + 1.5)), d = tr.getPointAtLength(Math.max(0, L * f - 1.5));
+      var ang = Math.atan2(c.y - d.y, c.x - d.x) * 180 / Math.PI + 90;
+      e.cam.setAttribute('transform', 'translate(' + a.x.toFixed(2) + ' ' + a.y.toFixed(2) + ') rotate(' + ang.toFixed(1) + ')');
+      e.nodos.forEach(function (n) { n.classList.toggle('rec--on', P >= +n.getAttribute('data-k') - .015); });
+      e.puertas.forEach(function (p) { p.classList.toggle('rec--on', P >= +p.getAttribute('data-i') + .5); });
+    });
+    el0.setAttribute('data-estado', estado);
+    el0.querySelectorAll('.rec__st').forEach(function (s) {
+      var orden = ['idle', 'inTour', 'completed'], k = orden.indexOf(s.getAttribute('data-st')), act = orden.indexOf(estado);
+      s.classList.toggle('rec__st--actual', k === act);
+      s.classList.toggle('rec__st--paso', k < act);
+    });
+    el0.classList.toggle('rec--fin', P >= 7);
+  }
+
+  Presentacion.diapositiva({
+    id: 'recorrido',
+    titulo: 'De punta a punta',
+    seccion: 'Ingeniería',
+    tema: 'bone',
+    transicion: 'lateral',
+    resumen: 'Del menú a la despedida, etapa por etapa',
+    html: `
+      <div class="lienzo rec">
+        ${Deck.cabeza('Flujo', 'Un recorrido, de punta a punta.')}
+        <div class="rec__caja" data-anim="aparecer" style="--retraso:160ms">
+          ${escena('h')}${escena('v')}
+        </div>
+        <p class="rec__estado" data-anim="subir" style="--retraso:380ms">
+          <span class="rec__clave">AppState:</span>
+          <span class="rec__st" data-st="idle">idle</span><span class="rec__flechita" aria-hidden="true">→</span>
+          <span class="rec__st" data-st="inTour">inTour</span><span class="rec__flechita" aria-hidden="true">→</span>
+          <span class="rec__st" data-st="completed">completed</span>
+        </p>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      preparar(el);
+      if (b) b.detener();
+      if (Deck.quieto()) { P = 7; pintar(); return; }
+      P = 0; pintar();
+      var total = 0;
+      b = Deck.bucle(function (dt) {
+        total += dt * 1000;
+        P = pDeTiempo(total);
+        pintar();
+        if (P >= 7) b.detener();
+      });
+      b.iniciar();
+    },
+    alSalir: function () { if (b) b.detener(); }
+  });
+})();

@@ -1,0 +1,64 @@
+/* 07 · Guía — texto a la izquierda; a la derecha el teléfono en tour y, a su izquierda, la lupa del
+   recuadro (la capa aumentada levantada del teléfono), unidas por dos trazas doradas. */
+.diapo[data-id="guia"] .guia{display:grid;grid-template-columns:minmax(0,37fr) minmax(0,63fr);align-items:center;gap:var(--e-3)}
+.diapo[data-id="guia"] .guia__texto{display:flex;flex-direction:column;gap:var(--e-5);position:relative;z-index:2}
+.diapo[data-id="guia"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*3.7)}
+.diapo[data-id="guia"] .guia__lista{max-width:none}
+.diapo[data-id="guia"] .guia__lista>li{white-space:nowrap}
+.diapo[data-id="guia"] .guia__toque{transition:color .5s var(--ease-suave)}
+.diapo[data-id="guia"] .guia__toque::before{transition:background-color .5s,box-shadow .5s}
+.diapo[data-id="guia"].guia--mapa .guia__toque{color:var(--texto)}
+.diapo[data-id="guia"].guia--mapa .guia__toque::before{background:var(--oro);box-shadow:0 0 0 .3em rgba(230,186,98,.28),0 0 14px rgba(230,186,98,.6)}
+
+/* Escena: el teléfono a la derecha y la lupa a su izquierda */
+.diapo[data-id="guia"] .guia__escena{position:relative;height:var(--alto-util);
+  --tel:min(calc(var(--u)*19.5),calc(var(--alto-util)*.47));--lupa:min(calc(var(--u)*30),calc(var(--alto-util)*.86))}
+.diapo[data-id="guia"] .guia__telefono-caja{position:absolute;right:calc(var(--u)*1);top:50%;margin-top:calc(var(--tel)*-1.035)}
+.diapo[data-id="guia"] .guia__telefono{--ancho:var(--tel)}
+.diapo[data-id="guia"] .guia__lupa{position:absolute;width:var(--lupa);right:calc(var(--tel) + var(--u)*1 + var(--u)*5.5);top:56%;
+  translate:0 -50%;transform:perspective(1600px) rotateY(8deg);transform-origin:100% 50%}
+.diapo[data-id="guia"] .guia__lupa-caja{position:relative;width:100%;aspect-ratio:366/236;border-radius:calc(var(--lupa)*.044);
+  box-shadow:0 calc(var(--u)*1.6) calc(var(--u)*4) rgba(0,0,0,.55),0 0 0 1px rgba(230,186,98,.28),0 0 calc(var(--u)*3) rgba(230,186,98,.12)}
+.diapo[data-id="guia"] .guia__lupa-caja .esquinas{inset:calc(var(--u)*-1.1);--esq-tam:calc(var(--u)*1.8)}
+/* La lupa sube desde el recuadro del teléfono */
+.diapo[data-id="guia"].anim-activa .guia__lupa{animation:guia-lupa 1150ms var(--ease-expo) 520ms both}
+@keyframes guia-lupa{from{opacity:0;translate:calc(var(--tel)*.62 + var(--u)*5) -12%;scale:.36}40%{opacity:1}to{opacity:1;translate:0 -50%;scale:1}}
+.diapo[data-id="guia"] .guia__hud{position:absolute;left:0;bottom:calc(100% + var(--u)*2.1);color:var(--texto-2)}
+.diapo[data-id="guia"] .guia__hud-vivo i{font-variant-numeric:tabular-nums}
+.diapo[data-id="guia"] .guia__hud-mapa{color:var(--texto-2)}
+.diapo[data-id="guia"].guia--mapa .guia__hud-vivo{opacity:.4}
+.modo-captura .diapo[data-id="guia"].guia--mapa .guia__hud-vivo{opacity:1}
+
+/* Las dos trazas que unen el teléfono con la lupa */
+.diapo[data-id="guia"] .guia__haz{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.diapo[data-id="guia"] .guia__haz line{stroke:var(--oro);stroke-width:1.2;opacity:.55;stroke-dasharray:1;stroke-dashoffset:0}
+.diapo[data-id="guia"].anim-activa .guia__haz line{animation:guia-haz 900ms var(--ease-entra-sale) 1250ms both}
+@keyframes guia-haz{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.diapo[data-id="guia"] .guia__lupa,.diapo[data-id="guia"] .guia__telefono-caja{z-index:1}
+
+.modo-captura .diapo[data-id="guia"] .guia__lupa,.modo-captura .diapo[data-id="guia"] .guia__haz line{animation:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="guia"].anim-activa .guia__lupa{animation:prs-aparecer 300ms both}
+  .diapo[data-id="guia"].anim-activa .guia__haz line{animation:none}
+}
+
+/* Vertical: texto, la lupa a todo el ancho y el teléfono recortado debajo (se ve su recuadro) */
+@media (orientation:portrait){
+  .diapo[data-id="guia"] .guia{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-6)}
+  .diapo[data-id="guia"] .cabeza .titular{max-width:none}
+  .diapo[data-id="guia"] .guia__lista>li{white-space:normal}
+  .diapo[data-id="guia"] .cabeza .titular{font-size:var(--t-1)}
+  .diapo[data-id="guia"] .guia__escena{height:auto;display:flex;flex-direction:column;gap:var(--e-5);--tel:min(78vw,440px);--lupa:100%}
+  .diapo[data-id="guia"] .guia__haz{display:none}
+  .diapo[data-id="guia"] .guia__lupa{order:1}
+  .diapo[data-id="guia"] .guia__telefono-caja{order:2}
+  .diapo[data-id="guia"] .guia__lupa{position:relative;right:auto;top:auto;translate:none;transform:none;width:100%;margin-top:calc(var(--u)*7)}
+  .diapo[data-id="guia"].anim-activa .guia__lupa{animation:prs-subir 900ms var(--ease-expo) 300ms both}
+  .diapo[data-id="guia"] .guia__lupa-caja{border-radius:calc(var(--u)*2.6)}
+  .diapo[data-id="guia"] .guia__lupa-caja .esquinas{inset:calc(var(--u)*-1.6)}
+  .diapo[data-id="guia"] .guia__hud{bottom:calc(100% + var(--u)*2.6)}
+  .diapo[data-id="guia"] .guia__telefono-caja{position:relative;right:auto;top:auto;margin:0 auto;height:calc(var(--tel)*1.15);overflow:hidden;
+    -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 30%);mask-image:linear-gradient(180deg,transparent 0,#000 30%);
+    display:flex;align-items:flex-end;width:calc(var(--tel) + 12px)}
+  .diapo[data-id="guia"] .guia__telefono{margin:0 auto}
+}

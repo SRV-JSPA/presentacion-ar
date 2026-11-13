@@ -1,0 +1,82 @@
+/* 15 · Eventos — el titular arriba y tres carriles a todo el ancho: a la izquierda el rótulo de cada
+   vía; a la derecha quién habla y quién escucha, unidos por un canvas con partículas. */
+.diapo[data-id="eventos"] .ev{height:var(--alto-util);justify-content:flex-start;gap:var(--e-5)}
+.diapo[data-id="eventos"] .cabeza .titular{max-width:none;font-size:calc(var(--u)*3.7)}
+
+.diapo[data-id="eventos"] .ev__carriles{position:relative;flex:1;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) minmax(0,1.55fr) minmax(0,1fr)}
+.diapo[data-id="eventos"] .ev__lienzo{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.diapo[data-id="eventos"].anim-activa .ev__lienzo{animation:prs-aparecer 900ms ease-out 420ms both}
+.diapo[data-id="eventos"] .ev__carril{position:relative;display:grid;grid-template-columns:minmax(0,25fr) minmax(0,75fr);align-items:center;gap:var(--e-4);
+  border-top:1px solid rgba(230,186,98,.14)}
+.diapo[data-id="eventos"] .ev__carril:last-child{border-bottom:1px solid rgba(230,186,98,.14)}
+
+/* Rótulo de la vía */
+.diapo[data-id="eventos"] .ev__rot{margin:0;display:flex;flex-direction:column;gap:.35em;position:relative;z-index:1}
+.diapo[data-id="eventos"] .ev__tipo{font-weight:700;font-size:var(--t-3);letter-spacing:-.02em;line-height:1.1;color:var(--texto)}
+.diapo[data-id="eventos"] .ev__rot code{font-family:var(--f-mono);font-size:var(--t-chico);font-weight:500;white-space:nowrap}
+.diapo[data-id="eventos"] .ev__rot small{font-size:var(--t-etiqueta);font-family:var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--texto-mute)}
+.diapo[data-id="eventos"] .ev__carril--comando code{color:var(--app)}
+.diapo[data-id="eventos"] .ev__carril--evento .ev__rot code{color:var(--oro)}
+.diapo[data-id="eventos"] .ev__carril--estado .ev__rot code{color:#F3E9D6}
+
+/* Nodos: quién habla y quién escucha */
+.diapo[data-id="eventos"] .ev__via{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:var(--e-6);height:100%}
+.diapo[data-id="eventos"] .ev__nodo{display:inline-flex;flex-direction:column;gap:.25em;padding:.7em 1em;border-radius:var(--r-2,10px);
+  background:#1E1914;border:1px solid rgba(243,233,214,.18);box-shadow:0 8px 24px rgba(0,0,0,.35);transition:border-color .5s,box-shadow .5s}
+.diapo[data-id="eventos"] .ev__nodo b{font-weight:700;font-size:var(--t-texto);color:var(--texto);white-space:nowrap;line-height:1.2}
+.diapo[data-id="eventos"] .ev__nodo code{font-family:var(--f-mono);font-size:var(--t-etiqueta);color:var(--texto-mute);white-space:nowrap}
+.diapo[data-id="eventos"] .ev__nodo--app{border-color:color-mix(in srgb,var(--app) 60%,transparent)}
+.diapo[data-id="eventos"] .ev__nodo--app b{color:var(--app)}
+
+/* Carril del evento: RA → EventBus → dos oyentes */
+.diapo[data-id="eventos"] .ev__via--abanico{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:var(--e-4)}
+.diapo[data-id="eventos"] .ev__nodo--ar{flex-direction:row;align-items:center;gap:.8em;border-color:rgba(230,186,98,.35)}
+.diapo[data-id="eventos"] .ev__nodo-t{display:flex;flex-direction:column;gap:.25em}
+.diapo[data-id="eventos"] .ev__next{position:relative;display:grid;place-items:center;flex:none;width:calc(var(--u)*2.6);height:calc(var(--u)*2.6);min-width:30px;min-height:30px;
+  border-radius:50%;background:#F5EBD6;color:#B9502F;font-size:calc(var(--u)*1.1)}
+.diapo[data-id="eventos"] .ev__next::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--oro);opacity:0}
+.diapo[data-id="eventos"] .ev__next--toque{animation:ev-toque 520ms var(--ease-expo)}
+.diapo[data-id="eventos"] .ev__next--toque::after{animation:ev-aro 900ms var(--ease-expo)}
+@keyframes ev-toque{40%{scale:.82}100%{scale:1}}
+@keyframes ev-aro{0%{opacity:1;scale:.9}100%{opacity:0;scale:1.9}}
+.diapo[data-id="eventos"] .ev__bus{justify-self:center;display:grid;place-items:center;width:calc(var(--u)*7.2);aspect-ratio:1;min-width:76px;border-radius:50%;
+  background:radial-gradient(circle,rgba(230,186,98,.16),rgba(30,25,20,.95) 70%);border:2px solid rgba(230,186,98,.55);
+  box-shadow:0 0 0 calc(var(--u)*.6) rgba(230,186,98,.06);transition:border-color .5s}
+.diapo[data-id="eventos"] .ev__bus b{font-family:var(--f-mono);font-size:var(--t-chico);font-weight:500;color:var(--oro)}
+.diapo[data-id="eventos"] .ev__oyentes{display:flex;flex-direction:column;gap:var(--e-3);align-items:stretch}
+.diapo[data-id="eventos"] .ev__nodo--oyente{min-width:calc(var(--u)*16)}
+.diapo[data-id="eventos"] .ev__accion{font-weight:500;color:var(--oro)}
+.diapo[data-id="eventos"] .ev__nodo--oyente code{color:var(--oro);opacity:.85}
+.diapo[data-id="eventos"].ev--recibido .ev__nodo--oyente{border-color:rgba(230,186,98,.7);box-shadow:0 0 0 1px rgba(230,186,98,.25),0 0 calc(var(--u)*2) rgba(230,186,98,.18)}
+.diapo[data-id="eventos"]:not(.ev--paso) .ev__bus{border-color:rgba(230,186,98,.3)}
+
+/* Pulso al recibir */
+.diapo[data-id="eventos"] .ev__pulso{animation:ev-pulso 900ms var(--ease-expo)}
+@keyframes ev-pulso{0%{box-shadow:0 0 0 0 rgba(230,186,98,.55)}100%{box-shadow:0 0 0 calc(var(--u)*1.4) rgba(230,186,98,0)}}
+.diapo[data-id="eventos"] .ev__carril--comando .ev__pulso{animation-name:ev-pulso-app}
+@keyframes ev-pulso-app{0%{box-shadow:0 0 0 0 rgba(209,91,51,.6)}100%{box-shadow:0 0 0 calc(var(--u)*1.4) rgba(209,91,51,0)}}
+
+.modo-captura .diapo[data-id="eventos"] .ev__lienzo{animation:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="eventos"] .ev__pulso,.diapo[data-id="eventos"] .ev__next--toque,.diapo[data-id="eventos"] .ev__next--toque::after{animation:none}
+}
+
+/* Vertical: cada carril apila su rótulo sobre la vía */
+@media (orientation:portrait){
+  .diapo[data-id="eventos"] .ev{height:auto;gap:var(--e-6)}
+  .diapo[data-id="eventos"] .cabeza .titular{font-size:var(--t-1)}
+  .diapo[data-id="eventos"] .ev__carriles{display:flex;flex-direction:column}
+  .diapo[data-id="eventos"] .ev__carril{grid-template-columns:minmax(0,1fr);gap:var(--e-4);padding:var(--e-5) 0}
+  .diapo[data-id="eventos"] .ev__via{gap:var(--e-5);height:auto}
+  .diapo[data-id="eventos"] .ev__nodo{padding:.6em .7em}
+  .diapo[data-id="eventos"] .ev__nodo b{font-size:var(--t-chico);white-space:normal}
+  .diapo[data-id="eventos"] .ev__via>.ev__nodo{max-width:48%}
+  .diapo[data-id="eventos"] .ev__via>.ev__nodo code{white-space:normal;overflow-wrap:anywhere}
+  .diapo[data-id="eventos"] .ev__via--abanico{grid-template-columns:auto auto minmax(0,1fr);gap:var(--e-3)}
+  .diapo[data-id="eventos"] .ev__nodo--ar{flex-direction:column;align-items:flex-start;width:min-content;padding:.6em}
+  .diapo[data-id="eventos"] .ev__nodo--ar code{display:none}
+  .diapo[data-id="eventos"] .ev__nodo--oyente b{font-size:12.5px}
+  .diapo[data-id="eventos"] .ev__nodo--oyente{min-width:0}
+  .diapo[data-id="eventos"] .ev__bus{width:68px;min-width:68px}
+  .diapo[data-id="eventos"] .ev__bus b{font-size:12px}
+}

@@ -1,0 +1,121 @@
+/* 04 · Capas — bone. El teléfono «explotado» en 3D: al entrar se acuesta de frente a la vista en
+   tres cuartos; con los pasos sus tres capas se separan en profundidad, de abajo hacia arriba:
+   la cámara (lo que hay), la realidad aumentada (el modelo C-II-6 y la flecha guía, en el visor 3D,
+   que al abrirse se levantan de su placa de frente a la vista) y la interfaz (botones de la capa RA y el recuadro de la guía, con el kit). Cada capa tiene su
+   rótulo, unido por una traza con nodo que se recalcula mientras las capas se mueven.
+   A la izquierda, una línea por módulo. */
+(function () {
+  var el0 = null, vModelo = null, vFlecha = null, obs = null, rafId = 0, hasta = 0, relojes = [];
+
+  function capa(clase, contenido, rotulo) {
+    return '<div class="capas__capa capas__capa--' + clase + '" data-capa="' + clase + '">' + contenido +
+      '<span class="capas__ancla" aria-hidden="true"></span></div>';
+  }
+
+  /* ── Trazas de los rótulos: del borde de cada capa a su rótulo ── */
+  function trazar() {
+    if (!el0) return;
+    var esc = el0.querySelector('.capas__escena'), svg = el0.querySelector('.capas__trazas');
+    if (!esc || !svg) return;
+    var E = esc.getBoundingClientRect(); if (!E.width) return;
+    var k = esc.offsetWidth / E.width;
+    svg.setAttribute('viewBox', '0 0 ' + esc.offsetWidth + ' ' + esc.offsetHeight);
+    ['cam', 'ra', 'ui'].forEach(function (c) {
+      var a = el0.querySelector('.capas__capa--' + c + ' .capas__ancla'), r = el0.querySelector('.capas__rotulo[data-capa="' + c + '"]');
+      var g = svg.querySelector('[data-capa="' + c + '"]');
+      if (!a || !r || !g) return;
+      var ra = a.getBoundingClientRect();
+      var ax = (ra.left + ra.width / 2 - E.left) * k, ay = (ra.top + ra.height / 2 - E.top) * k;
+      r.style.top = ay.toFixed(1) + 'px';
+      var lx = r.offsetLeft - 10;
+      var l = g.querySelector('line'), n = g.querySelector('circle');
+      l.setAttribute('x1', ax.toFixed(1)); l.setAttribute('y1', ay.toFixed(1));
+      l.setAttribute('x2', Math.max(ax, lx).toFixed(1)); l.setAttribute('y2', ay.toFixed(1));
+      n.setAttribute('cx', ax.toFixed(1)); n.setAttribute('cy', ay.toFixed(1));
+    });
+  }
+  /* mientras las capas se mueven (transición CSS), las trazas las siguen */
+  function seguir(ms) {
+    hasta = Math.max(hasta, performance.now() + ms);
+    if (rafId) return;
+    (function cuadro() {
+      trazar();
+      if (performance.now() < hasta) rafId = requestAnimationFrame(cuadro); else rafId = 0;
+    })();
+  }
+
+  function aplicar(el, n) {
+    el.classList.toggle('capas--abierto', n >= 1);
+    seguir(Deck.quieto() ? 0 : 1500);
+    if (Deck.quieto()) requestAnimationFrame(trazar);
+  }
+
+  Presentacion.diapositiva({
+    id: 'capas',
+    titulo: 'La propuesta',
+    seccion: 'La experiencia',
+    tema: 'bone',
+    transicion: 'lateral',
+    resumen: 'Cámara, realidad aumentada e interfaz',
+    html: `
+      <div class="lienzo capas">
+        <div class="capas__texto">
+          ${Deck.cabeza('La propuesta', 'Tres capas sobre la cámara del teléfono.')}
+          <ul class="lista capas__modulos" data-anim-grupo="subir" data-intervalo="110" style="--retraso:340ms">
+            <li><span><b>GPS</b> decide <span class="k">cuándo</span></span></li>
+            <li><span><b>ARKit</b> dibuja <span class="k">dónde</span></span></li>
+            <li><span><b>La guía</b> cuenta <span class="k">qué</span></span></li>
+          </ul>
+        </div>
+
+        <div class="capas__escena">
+          <svg class="capas__trazas" aria-hidden="true" data-decorativo>
+            <g data-capa="cam" data-paso="1"><line/><circle r="4"/></g>
+            <g data-capa="ra" data-paso="2"><line/><circle r="4"/></g>
+            <g data-capa="ui" data-paso="3"><line/><circle r="4"/></g>
+          </svg>
+          <div class="capas__vista">
+            <div class="capas__pila">
+              ${capa('cam', KitApp.telefono(KitApp.camara(), { clase: 'capas__telefono', sombraClara: true }))}
+              ${capa('ra', '<div class="capas__placa capas__placa--ra">' + Motivos.esquinas('esquinas--mira') + '</div>' +
+                '<div class="capas__pie capas__pie--modelo"><div class="capas__modelo"></div></div>' +
+                '<div class="capas__pie capas__pie--flecha"><div class="capas__flecha"></div></div>')}
+              ${capa('ui', '<div class="capas__placa capas__placa--ui">' +
+                KitApp.pantalla(KitApp.botonesRA({ siguiente: 'play' }) + KitApp.recuadro({ modo: 'video', guia: 'img/guia-bienvenida.png', plano: true }),
+                  { claseApp: 'capas__app' }) + '</div>')}
+            </div>
+          </div>
+          <div class="capas__rotulo capas__rotulo--cam" data-capa="cam" data-paso="1"><b>Cámara</b><span>lo que hay</span></div>
+          <div class="capas__rotulo capas__rotulo--ra" data-capa="ra" data-paso="2"><b>Realidad aumentada</b><span>el modelo y la flecha</span></div>
+          <div class="capas__rotulo capas__rotulo--ui" data-capa="ui" data-paso="3"><b>Interfaz</b><span>la guía, el mapa y los controles</span></div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      if (!vModelo) {
+        vModelo = Visor3D.crear(el.querySelector('.capas__modelo'), {
+          modelo: 'm7', tono: 'bone', niveles: 8, giro: .6, inclinacion: .42, velocidad: .16, encuadre: 1.2,
+          suelo: false, interactivo: false, grosor: 1.3
+        });
+        vFlecha = Visor3D.crear(el.querySelector('.capas__flecha'), {
+          modelo: 'flecha', tono: 'bone', niveles: 3, giro: 2.4, inclinacion: .62, velocidad: 0, encuadre: 1.05,
+          suelo: false, interactivo: false, grosor: 1.2
+        });
+        if (window.ResizeObserver) { obs = new ResizeObserver(function () { trazar(); }); obs.observe(el.querySelector('.capas__escena')); }
+      }
+      vModelo.medir(); vFlecha.medir();
+      vModelo.final({ curvas: 0 }); vFlecha.final({ curvas: 0 });
+      aplicar(el, Deck.paso());
+      if (Deck.quieto()) { requestAnimationFrame(trazar); return; }
+      vModelo.iniciar();
+      seguir(2600);   /* la entrada (el teléfono se acuesta) y la transición de la diapositiva */
+    },
+    alPaso: function (el, n) { aplicar(el, n); },
+    alSalir: function () {
+      relojes.forEach(clearTimeout); relojes = [];
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      if (vModelo) { vModelo.detener(); vModelo.cancelar(); }
+    }
+  });
+})();

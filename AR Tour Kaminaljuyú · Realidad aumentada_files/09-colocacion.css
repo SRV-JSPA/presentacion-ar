@@ -1,0 +1,77 @@
+/* 09 · Colocación — texto, fórmula y lista a la izquierda; a la derecha el plano cenital de la escena. */
+.diapo[data-id="colocacion"] .col{display:grid;grid-template-columns:minmax(0,40fr) minmax(0,60fr);align-items:center;gap:var(--e-4)}
+.diapo[data-id="colocacion"] .col__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-5);position:relative;z-index:2}
+.diapo[data-id="colocacion"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*3.9)}
+.diapo[data-id="colocacion"] .col__formula{font-size:var(--t-lead);line-height:1.55;padding:.7em 1.1em}
+.diapo[data-id="colocacion"] .col__lista{gap:var(--e-2)}
+.diapo[data-id="colocacion"] .col__li-recalc::before{transition:background-color .3s,box-shadow .3s}
+.diapo[data-id="colocacion"].anim-activa .col--lectura .col__li-recalc::before{animation:col-li 900ms var(--ease-expo) both}
+@keyframes col-li{0%{background:var(--oro);box-shadow:0 0 0 .5em rgba(230,186,98,.35)}100%{background:transparent;box-shadow:0 0 0 .26em rgba(230,186,98,.14)}}
+
+/* Plano cenital */
+.diapo[data-id="colocacion"] .col__escena{display:flex;align-items:center;justify-content:center;height:var(--alto-util)}
+.diapo[data-id="colocacion"] .col__plano{position:relative;width:min(100%,calc(var(--alto-util)*.94));aspect-ratio:1;
+  background:radial-gradient(closest-side at 27% 79%,rgba(230,186,98,.07),transparent)}
+.diapo[data-id="colocacion"] .col__plano>.esquinas{--esq-tam:calc(var(--u)*2.2)}
+.diapo[data-id="colocacion"] .col__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.diapo[data-id="colocacion"] .col__reticula line{stroke:#2C241C;stroke-width:.7}
+.diapo[data-id="colocacion"] .col__ejes line{stroke:#6E6152;stroke-width:1.1}
+.diapo[data-id="colocacion"] .col__punta{fill:#6E6152}
+.diapo[data-id="colocacion"] .col__vec{stroke:var(--oro);stroke-width:2.4;stroke-linecap:round;transition:opacity .3s}
+.diapo[data-id="colocacion"] .col__cono{fill:url(#col-cono-g);stroke:rgba(230,186,98,.42);stroke-width:.9;stroke-dasharray:3 3}
+.diapo[data-id="colocacion"] .col__arco{fill:none;stroke:var(--oro);stroke-width:1.3;opacity:.85}
+.diapo[data-id="colocacion"] .col__proy{stroke:var(--oro);stroke-width:1;stroke-dasharray:3.5 3.5;opacity:.75}
+.diapo[data-id="colocacion"] .col__comp{stroke:var(--oro);stroke-width:4.6;stroke-linecap:round;opacity:.9}
+.diapo[data-id="colocacion"] .col__comp--z{stroke:var(--crema-app)}
+.diapo[data-id="colocacion"] .col__rastro circle{fill:var(--oro)}
+.diapo[data-id="colocacion"] .col__poi-punto{fill:var(--oro);stroke:#1A1A1A;stroke-width:1.4}
+.diapo[data-id="colocacion"] .col__poi-onda,.diapo[data-id="colocacion"] .col__cam-onda{fill:none;stroke:var(--oro);stroke-width:1.2;opacity:0;
+  transform-box:fill-box;transform-origin:center}
+.diapo[data-id="colocacion"].anim-activa .col--lectura .col__poi-onda{animation:col-onda 900ms var(--ease-expo) both}
+.diapo[data-id="colocacion"].anim-activa .col--lectura .col__cam-onda{animation:col-onda 900ms var(--ease-expo) both}
+@keyframes col-onda{from{opacity:.95;transform:scale(1)}to{opacity:0;transform:scale(3.4)}}
+.diapo[data-id="colocacion"] .col__camara rect{fill:#1A1A1A;stroke:var(--crema-app);stroke-width:1.6}
+.diapo[data-id="colocacion"] .col__camara>circle:not(.col__cam-onda){fill:var(--oro)}
+/* El modelo: fantasma punteado que se solidifica (--solido 0…1) */
+.diapo[data-id="colocacion"] .col__modelo{opacity:0}
+.diapo[data-id="colocacion"] .col__fn{fill:none;stroke:var(--oro);stroke-width:1.05;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:2.4 2.6;transition:stroke-dasharray .6s}
+.diapo[data-id="colocacion"] .col__fn--base{fill:rgba(230,186,98,calc(var(--solido,0) * .32));stroke-width:1.5}
+.diapo[data-id="colocacion"] .col__suelo{fill:rgba(230,186,98,calc(var(--solido,0) * .08));stroke:rgba(230,186,98,calc(var(--solido,0) * .3));stroke-width:.6}
+.diapo[data-id="colocacion"] .col--solido .col__fn{stroke-dasharray:none;filter:drop-shadow(0 0 2px rgba(230,186,98,.55))}
+
+/* Rótulos en HTML (legibles) */
+.diapo[data-id="colocacion"] .col__r,.diapo[data-id="colocacion"] .col__eje{position:absolute;font-family:var(--f-mono);font-size:var(--t-etiqueta);
+  font-weight:500;letter-spacing:.04em;white-space:nowrap;line-height:1.3;pointer-events:none}
+.diapo[data-id="colocacion"] .col__eje{color:var(--texto-mute)}
+.diapo[data-id="colocacion"] .col__eje b{color:var(--texto-2);font-weight:500}
+.diapo[data-id="colocacion"] .col__eje--n{left:calc((200 - 92) / 400 * 100%);top:0;translate:-50% -135%}
+.diapo[data-id="colocacion"] .col__eje--e{right:0;top:calc((200 + 118) / 400 * 100%);translate:0 -170%}
+.diapo[data-id="colocacion"] .col__r{translate:-50% -50%;color:var(--texto);opacity:0}
+.diapo[data-id="colocacion"] .col__r-d,.diapo[data-id="colocacion"] .col__r-th{font-size:var(--t-chico);color:var(--oro);font-style:italic}
+.diapo[data-id="colocacion"] .col__r-x{translate:-50% 0;padding:.1em .45em;border-radius:3px;background:rgba(26,26,26,.85);color:var(--oro)}
+.diapo[data-id="colocacion"] .col__r-z{translate:-50% -50%;rotate:-90deg;padding:.1em .45em;border-radius:3px;background:rgba(26,26,26,.85);color:var(--crema-app)}
+.diapo[data-id="colocacion"] .col__r-cam{translate:-100% 0;opacity:1;color:var(--texto-mute)}
+.diapo[data-id="colocacion"] .col__r-modelo{translate:0 -100%}
+.diapo[data-id="colocacion"] .col__hud{position:absolute;right:calc(var(--u)*2.4);top:calc(var(--u)*1.6);text-align:right}
+.diapo[data-id="colocacion"] .col__hud i{font-variant-numeric:tabular-nums}
+
+.modo-captura .diapo[data-id="colocacion"] .col__fn{transition:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="colocacion"].anim-activa .col__poi-onda,.diapo[data-id="colocacion"].anim-activa .col__cam-onda,
+  .diapo[data-id="colocacion"].anim-activa .col__li-recalc::before{animation:none!important}
+}
+
+/* Vertical: titular, plano a todo el ancho, fórmula y lista */
+@media (orientation:portrait){
+  .diapo[data-id="colocacion"] .col{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="colocacion"] .col__texto{display:contents}
+  .diapo[data-id="colocacion"] .cabeza{order:1}
+  .diapo[data-id="colocacion"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="colocacion"] .col__escena{order:2;height:auto;margin:var(--e-5) 0 var(--e-2)}
+  .diapo[data-id="colocacion"] .col__plano{width:100%}
+  .diapo[data-id="colocacion"] .col__formula{order:3;align-self:flex-start}
+  .diapo[data-id="colocacion"] .col__lista{order:4}
+  .diapo[data-id="colocacion"] .col__r-modelo .rotulo>span{display:none}
+  .diapo[data-id="colocacion"] .col__hud{top:calc(var(--u)*1.6);right:auto;left:calc(var(--u)*2.4);text-align:left}
+}

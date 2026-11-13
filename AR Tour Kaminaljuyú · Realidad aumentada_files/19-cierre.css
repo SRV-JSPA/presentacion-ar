@@ -1,0 +1,64 @@
+/* 19 · Cierre — espejo de la portada: la Acrópolis a la izquierda, en órbita alta, con anillos de curvas
+   de nivel que se expanden sobre el suelo; la guía de pie entre el modelo y el texto; a la derecha,
+   «Gracias.», la despedida de la guía, «¿Preguntas?» y el pie. En vertical, el modelo arriba. */
+.diapo[data-id="cierre"] .cierre{display:grid;grid-template-columns:minmax(0,61fr) minmax(0,39fr);align-items:center}
+
+/* Marco decorativo que llega a los bordes (no cuenta para desbordes) */
+.diapo[data-id="cierre"] .cierre__marco{position:absolute;z-index:1;overflow:hidden;
+  top:calc(var(--margen-arriba)*-1);bottom:calc(var(--reserva-abajo)*-1);left:calc(var(--margen-x)*-1);right:33%}
+.diapo[data-id="cierre"] .cierre__marco::before{content:'';position:absolute;left:4%;right:4%;top:10%;bottom:18%;
+  background:radial-gradient(closest-side,rgba(230,186,98,.1),transparent 72%);pointer-events:none}
+.diapo[data-id="cierre"] .cierre__visor,.diapo[data-id="cierre"] .cierre__anillos{position:absolute;left:0;right:0;top:0;bottom:calc(var(--reserva-abajo)*.5)}
+.diapo[data-id="cierre"] .cierre__anillos{width:100%;height:calc(100% - var(--reserva-abajo)*.5);display:block}
+.diapo[data-id="cierre"] .cierre__marco{-webkit-mask-image:linear-gradient(90deg,#000 80%,transparent);mask-image:linear-gradient(90deg,#000 80%,transparent)}
+.diapo[data-id="cierre"] .cierre__rotulo{position:absolute;left:0;top:0;z-index:2;--oro-tema:var(--oro)}
+
+/* La guía: aparece con la línea de escaneo, de abajo hacia arriba */
+.diapo[data-id="cierre"] .cierre__guia{position:absolute;z-index:3;margin:0;left:45.5%;bottom:calc(var(--u)*-.5);height:min(54%,calc(var(--alto-util)*.54));
+  aspect-ratio:448/880;pointer-events:none}
+.diapo[data-id="cierre"] .cierre__guia::after{content:'';position:absolute;left:8%;right:8%;bottom:-1%;height:5%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent);z-index:-1}
+.diapo[data-id="cierre"] .cierre__guia-caja{position:relative;width:100%;height:100%}
+.diapo[data-id="cierre"] .cierre__guia img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
+.diapo[data-id="cierre"] .cierre__escaneo{opacity:0}
+.diapo[data-id="cierre"].anim-activa .cierre__guia-caja{animation:cierre-guia 1700ms var(--ease-escaneo) 1000ms both}
+.diapo[data-id="cierre"].anim-activa .cierre__escaneo{animation:escaneo-subir 1700ms var(--ease-escaneo) 1000ms both}
+@keyframes cierre-guia{from{clip-path:inset(100% -20% 0 -20%)}to{clip-path:inset(-5% -20% 0 -20%)}}
+
+/* Texto */
+.diapo[data-id="cierre"] .cierre__texto{grid-column:2;position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-4)}
+.diapo[data-id="cierre"] .cierre__cabeza .titular{font-size:var(--t-xl);line-height:1;letter-spacing:-.045em;color:var(--crema-app)}
+.diapo[data-id="cierre"] .cierre__cita{position:relative;margin:0;padding:var(--e-3) var(--e-4);max-width:calc(var(--u)*34);background:color-mix(in srgb,var(--oro) 6%,transparent)}
+.diapo[data-id="cierre"] .cierre__cita .esquinas{--esq-tam:calc(var(--u)*1.4)}
+.diapo[data-id="cierre"] .cierre__frase{margin:0;font-size:max(18px,calc(var(--u)*1.7));font-weight:500;line-height:1.38;letter-spacing:-.01em;color:var(--texto)}
+.diapo[data-id="cierre"] .cierre__w{display:inline-block}
+.diapo[data-id="cierre"].anim-activa .cierre__w{animation:cierre-palabra 620ms var(--ease-expo) calc(1500ms + var(--i)*130ms) both}
+@keyframes cierre-palabra{from{opacity:0;translate:0 .35em;filter:blur(3px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+.diapo[data-id="cierre"] .cierre__autor{margin-top:var(--e-2);font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.1em;text-transform:uppercase;color:var(--acento)}
+.diapo[data-id="cierre"].anim-activa .cierre__autor{animation:cierre-palabra 620ms var(--ease-expo) 2900ms both}
+.diapo[data-id="cierre"] .cierre__pregunta{margin:var(--e-2) 0 0;font-family:var(--f-titular);font-weight:700;font-size:var(--t-2);line-height:1.05;letter-spacing:-.03em;
+  color:var(--texto);display:flex;align-items:center;gap:.4em}
+.diapo[data-id="cierre"] .cierre__pregunta::before{content:'';width:.26em;height:.26em;border-radius:50%;background:var(--oro);
+  box-shadow:0 0 0 .14em rgba(230,186,98,.2)}
+.diapo[data-id="cierre"] .cierre__pie{margin:0;padding-top:var(--e-3);border-top:1px solid var(--linea);font-family:var(--f-mono);font-size:var(--t-etiqueta);
+  letter-spacing:.1em;text-transform:uppercase;color:var(--texto-mute);line-height:1.5}
+
+.modo-captura .diapo[data-id="cierre"] .cierre__guia-caja,.modo-captura .diapo[data-id="cierre"] .cierre__escaneo,
+.modo-captura .diapo[data-id="cierre"] .cierre__w,.modo-captura .diapo[data-id="cierre"] .cierre__autor{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="cierre"] .cierre__guia-caja,.diapo[data-id="cierre"] .cierre__escaneo,
+  .diapo[data-id="cierre"] .cierre__w,.diapo[data-id="cierre"] .cierre__autor{animation:none!important}
+}
+
+/* Vertical: el modelo arriba (recortado por su marco), la guía a su derecha, el texto debajo */
+@media (orientation:portrait){
+  .diapo[data-id="cierre"] .cierre{display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;padding-top:calc(var(--u)*46)}
+  .diapo[data-id="cierre"] .cierre__marco{right:calc(var(--margen-x)*-1);bottom:auto;height:calc(var(--u)*46 + var(--margen-arriba));
+    -webkit-mask-image:linear-gradient(#000 82%,transparent);mask-image:linear-gradient(#000 82%,transparent)}
+  .diapo[data-id="cierre"] .cierre__visor,.diapo[data-id="cierre"] .cierre__anillos{bottom:0;right:22%;height:auto}
+  .diapo[data-id="cierre"] .cierre__anillos{height:100%;width:78%}
+  .diapo[data-id="cierre"] .cierre__guia{left:auto;right:-2%;top:calc(var(--u)*14);bottom:auto;height:calc(var(--u)*34)}
+  .diapo[data-id="cierre"] .cierre__texto{gap:var(--e-4)}
+  .diapo[data-id="cierre"] .cierre__cabeza .titular{font-size:min(calc(var(--u)*7.5),19vw)}
+  .diapo[data-id="cierre"] .cierre__cita{max-width:none}
+}

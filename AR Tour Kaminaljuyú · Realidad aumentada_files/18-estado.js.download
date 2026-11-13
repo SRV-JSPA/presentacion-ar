@@ -1,0 +1,184 @@
+/* 18 · Estado — bone. La diapositiva honesta. Los senderos del parque que la app ya tiene trazados
+   (RouteConfig.swift:30-139: 11 tramos, 70 puntos [lat, lon]) proyectados a un plano local
+   (equirectangular alrededor del centro del mapa, MapViewRepresentable.swift:33-34) y dibujados tramo
+   por tramo en el orden de la ruta: una pluma dorada los traza y cada tramo se asienta punteado, en
+   barro: trazado pero apagado (routeConnectorsEnabled = false, AppConfig.swift:22). Los nodos de los
+   extremos llevan su estructura. Al lado, «Hoy» y «Sigue», con los textos del guion. */
+(function () {
+  var S = window.Senderos;
+  var NOMBRE = {
+    informacion_inicial: 'Inicio', inicio: 'Inicio', monticulo_6: 'C-II-6', acropolis: 'Acrópolis', monticulo_3: 'C-II-3',
+    monticulo_5: 'C-II-5', monticulo_7: 'C-II-7', monticulo_8: 'C-II-8', monticulo_12: 'C-II-12', palangana: 'Estructura E',
+    monticulo_14: 'C-II-14', monticulo_13: 'C-II-13'
+  };
+  /* De qué lado va cada rótulo para que no se encimen (o: oeste, e: este, n: norte, s: sur) */
+  var LADO = { inicio: 'o', monticulo_6: 'o', acropolis: 'o', monticulo_3: 'n', monticulo_5: 'e', monticulo_7: 'e', monticulo_8: 'e',
+    monticulo_12: 'o', palangana: 's', monticulo_14: 'n', monticulo_13: 's' };
+
+  /* ── Proyección a metros locales: x al este, y al sur ── */
+  var lat0 = S.centro[0], lon0 = S.centro[1], kx = Math.cos(lat0 * Math.PI / 180) * 111320, ky = 110574;
+  function P(p) { return [(p[1] - lon0) * kx, -(p[0] - lat0) * ky]; }
+  var TR = S.tramos.map(function (t) {
+    var pts = t.puntos.map(P), acum = [0];
+    for (var i = 1; i < pts.length; i++) acum.push(acum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    return { de: t.de === 'informacion_inicial' ? 'inicio' : t.de, a: t.a === 'informacion_inicial' ? 'inicio' : t.a, pts: pts, acum: acum, largo: acum[acum.length - 1] };
+  });
+  var TOTAL_PUNTOS = TR.reduce(function (s, t) { return s + t.pts.length; }, 0);
+  /* Cada estructura, en el promedio de los extremos de los tramos que la tocan */
+  var NODOS = {}, ORDEN = [];
+  TR.forEach(function (t, i) {
+    [[t.de, t.pts[0], i], [t.a, t.pts[t.pts.length - 1], i + .999]].forEach(function (e) {
+      var n = NODOS[e[0]];
+      if (!n) { n = NODOS[e[0]] = { id: e[0], xs: [], cuando: e[2] }; ORDEN.push(e[0]); }
+      n.xs.push(e[1]); n.cuando = Math.min(n.cuando, e[2]);
+    });
+  });
+  ORDEN.forEach(function (id) {
+    var n = NODOS[id];
+    n.x = n.xs.reduce(function (s, p) { return s + p[0]; }, 0) / n.xs.length;
+    n.y = n.xs.reduce(function (s, p) { return s + p[1]; }, 0) / n.xs.length;
+  });
+  var xs = [], ys = [];
+  TR.forEach(function (t) { t.pts.forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+  var MX = 20, MY = 16;
+  var X0 = Math.min.apply(null, xs) - MX, X1 = Math.max.apply(null, xs) + MX, Y0 = Math.min.apply(null, ys) - MY, Y1 = Math.max.apply(null, ys) + MY;
+  var W = X1 - X0, H = Y1 - Y0;
+  function f(v) { return v.toFixed(1); }
+  function pct(v, a, l) { return ((v - a) / l * 100).toFixed(2) + '%'; }
+
+  function svgMapa() {
+    var g = '', k;
+    /* Retícula del levantamiento cada 25 m */
+    for (k = Math.ceil(X0 / 25) * 25; k <= X1; k += 25) g += '<line x1="' + k + '" y1="' + f(Y0) + '" x2="' + k + '" y2="' + f(Y1) + '"/>';
+    for (k = Math.ceil(Y0 / 25) * 25; k <= Y1; k += 25) g += '<line x1="' + f(X0) + '" y1="' + k + '" x2="' + f(X1) + '" y2="' + k + '"/>';
+    var tramos = '', puntos = '';
+    TR.forEach(function (t, i) {
+      var d = t.pts.map(function (p) { return f(p[0]) + ',' + f(p[1]); }).join(' ');
+      tramos += '<polyline class="est__apagado" data-i="' + i + '" points="' + d + '"/>' +
+        '<polyline class="est__trazo" data-i="' + i + '" points="' + d + '" style="stroke-dasharray:' + f(t.largo + 1) + ' ' + f(t.largo + 2) + '"/>';
+      t.pts.forEach(function (p, j) { puntos += '<circle class="est__p" data-i="' + i + '" data-j="' + j + '" cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="1.25"/>'; });
+    });
+    var nodos = ORDEN.map(function (id) {
+      var n = NODOS[id];
+      return '<g class="est__nodo" data-n="' + id + '" transform="translate(' + f(n.x) + ' ' + f(n.y) + ')"><circle class="est__nodo-aro" r="4.6"/><circle class="est__nodo-c" r="1.9"/></g>';
+    }).join('');
+    return '<svg class="est__svg" viewBox="' + [f(X0), f(Y0), f(W), f(H)].join(' ') + '" aria-hidden="true">' +
+      '<g class="est__reticula">' + g + '</g><g class="est__tramos">' + tramos + '</g><g class="est__puntos">' + puntos + '</g>' + nodos +
+      '<circle class="est__pluma" r="2.6"/></svg>';
+  }
+  function rotulos() {
+    return ORDEN.map(function (id) {
+      var n = NODOS[id];
+      return '<span class="est__rot est__rot--' + (LADO[id] || 'e') + '" data-n="' + id + '" style="left:' + pct(n.x, X0, W) + ';top:' + pct(n.y, Y0, H) + '">' +
+        NOMBRE[id] + '</span>';
+    }).join('');
+  }
+
+  /* ── El trazo: una pluma que recorre los tramos en orden de ruta ── */
+  var el0 = null, b = null, LARGO = TR.reduce(function (s, t) { return s + t.largo; }, 0);
+  var VEL = .135;            /* metros por milisegundo */
+  var PAUSA = 140;           /* entre tramos */
+  var INICIO = 700;
+  var horario = (function () {
+    var t = INICIO;
+    return TR.map(function (tr) { var h = { t0: t, t1: t + tr.largo / VEL }; t = h.t1 + PAUSA; return h; });
+  })();
+  var FIN = horario[horario.length - 1].t1;
+
+  function pintar(ms) {
+    if (!el0) return;
+    var vistos = 0, pluma = null;
+    TR.forEach(function (t, i) {
+      var h = horario[i], fr = ms <= h.t0 ? 0 : ms >= h.t1 ? 1 : (ms - h.t0) / (h.t1 - h.t0);
+      var dist = fr * t.largo;
+      var tz = el0.querySelector('.est__trazo[data-i="' + i + '"]');
+      tz.style.strokeDashoffset = f((t.largo + 1) * (1 - fr) + (fr > 0 ? 0 : 1));
+      tz.classList.toggle('est--listo', fr >= 1);
+      el0.querySelector('.est__apagado[data-i="' + i + '"]').classList.toggle('est--listo', fr >= 1);
+      t.acum.forEach(function (a, j) {
+        var on = fr > 0 && a <= dist + .01;
+        if (on) vistos++;
+        el0.querySelector('.est__p[data-i="' + i + '"][data-j="' + j + '"]').classList.toggle('est--on', on);
+      });
+      if (fr > 0 && fr < 1) {
+        for (var j = 1; j < t.pts.length; j++) if (t.acum[j] >= dist) break;
+        var a = t.pts[j - 1], c = t.pts[j], s = (dist - t.acum[j - 1]) / ((t.acum[j] - t.acum[j - 1]) || 1);
+        pluma = [a[0] + (c[0] - a[0]) * s, a[1] + (c[1] - a[1]) * s];
+      }
+    });
+    ORDEN.forEach(function (id) {
+      var n = NODOS[id], i = Math.floor(n.cuando), h = horario[i];
+      var on = n.cuando % 1 === 0 ? ms >= h.t0 : ms >= h.t1;
+      el0.querySelectorAll('[data-n="' + id + '"]').forEach(function (e) { e.classList.toggle('est--on', on); });
+    });
+    var pl = el0.querySelector('.est__pluma');
+    if (pluma) { pl.setAttribute('cx', f(pluma[0])); pl.setAttribute('cy', f(pluma[1])); }
+    pl.classList.toggle('est--on', !!pluma);
+    var tramosListos = horario.filter(function (h) { return ms >= h.t1; }).length;
+    el0.querySelectorAll('.est__n-puntos').forEach(function (e) { e.textContent = vistos; });
+    el0.querySelectorAll('.est__n-tramos').forEach(function (e) { e.textContent = tramosListos; });
+    el0.classList.toggle('est--fin', ms >= FIN);
+  }
+
+  Presentacion.diapositiva({
+    id: 'estado',
+    titulo: 'Estado honesto',
+    seccion: 'Cierre',
+    tema: 'bone',
+    transicion: 'plano',
+    resumen: 'Lo que ya funciona y lo que sigue',
+    html: `
+      <div class="lienzo est">
+        <div class="est__texto">
+          ${Deck.cabeza('Estado actual', 'Lo que ya funciona y lo que sigue.')}
+          <div class="est__listas">
+            <section class="est__grupo est__grupo--hoy">
+              <h3 class="est__h" data-anim="subir" style="--retraso:260ms">Hoy</h3>
+              <ul class="lista lista--ok est__lista" data-anim-grupo="subir" data-intervalo="90" style="--retraso:340ms">
+                <li><span>Recorrido de prueba con <b>2 puntos</b> y su modelo 3D</span></li>
+                <li><span>Narración lista para <b>10 estructuras</b></span></li>
+                <li class="est__li-senderos"><span>Senderos del parque trazados: <b class="est__cifra"><span class="est__n-puntos">${TOTAL_PUNTOS}</span> puntos</b></span></li>
+              </ul>
+            </section>
+            <section class="est__grupo est__grupo--sigue">
+              <h3 class="est__h" data-anim="subir" style="--retraso:560ms">Sigue</h3>
+              <ul class="lista est__lista" data-anim-grupo="subir" data-intervalo="90" style="--retraso:640ms">
+                <li><span>Activar los puntos y senderos del parque</span></li>
+                <li><span>Tour libre</span></li>
+                <li><span>Pruebas automáticas de GPS, RA y guía</span></li>
+              </ul>
+            </section>
+          </div>
+        </div>
+
+        <div class="est__escena">
+          <div class="est__leyenda" data-anim="aparecer" style="--retraso:500ms">
+            <div class="est__hud hud" aria-hidden="true">
+              <div><b>RouteConfig</b> · senderos</div>
+              <div><i class="est__n-tramos">${TR.length}</i> tramos · <i class="est__n-puntos">${TOTAL_PUNTOS}</i> puntos</div>
+            </div>
+            <p class="est__bandera">
+              <span class="est__switch" aria-hidden="true"><i></i></span>
+              <code>routeConnectorsEnabled = false</code>
+            </p>
+          </div>
+          <div class="est__mapa" style="--ar:${f(W)}/${f(H)}">
+            ${svgMapa()}
+            ${rotulos()}
+            <span class="est__norte" aria-hidden="true">N</span>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      if (b) b.detener();
+      if (Deck.quieto()) { pintar(FIN + 1); return; }
+      var t = 0;
+      pintar(0);
+      b = Deck.bucle(function (dt) { t += dt * 1000; pintar(t); if (t > FIN) b.detener(); });
+      b.iniciar();
+    },
+    alSalir: function () { if (b) b.detener(); }
+  });
+})();

@@ -1,0 +1,84 @@
+/* 03 · Capa — texto a la izquierda; a la derecha, el comparador: «Hoy» (el cerro de barro) y «Con la
+   app» (el modelo con su alambre dorado), separados por un divisor que se arrastra. */
+.diapo[data-id="capa"] .capa{display:grid;grid-template-columns:minmax(0,34fr) minmax(0,66fr);align-items:center;gap:var(--e-5)}
+.diapo[data-id="capa"] .capa__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-4);position:relative;z-index:2}
+.diapo[data-id="capa"] .cabeza .titular{max-width:12ch;font-size:calc(var(--u)*3.7)}
+.diapo[data-id="capa"] .capa__lead{max-width:30ch;color:var(--texto-2)}
+.diapo[data-id="capa"] .capa__nota{margin:var(--e-2) 0 0;padding-top:var(--e-3);border-top:1px solid var(--linea);font-family:var(--f-mono);
+  font-size:var(--t-etiqueta);letter-spacing:.08em;text-transform:uppercase;color:var(--texto-mute);line-height:1.6;max-width:46ch}
+
+/* Escena */
+.diapo[data-id="capa"] .capa__escena{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:var(--e-2)}
+.diapo[data-id="capa"] .capa__marco{position:relative;height:calc(var(--alto-util)*.84);border-radius:var(--r-3);overflow:hidden;
+  cursor:ew-resize;touch-action:pan-y;user-select:none;-webkit-user-select:none;
+  background:#120F0C;box-shadow:0 0 0 1px rgba(243,234,216,.08),0 calc(var(--u)*1.6) calc(var(--u)*5) rgba(0,0,0,.5)}
+
+/* Hoy: el cerro de barro sobre tierra oscura */
+.diapo[data-id="capa"] .capa__lado-hoy{position:absolute;inset:0;
+  background:radial-gradient(90% 70% at 50% 62%,#2A2017 0%,#16110D 70%)}
+.diapo[data-id="capa"] .capa__cerro{position:absolute;left:0;top:4%;width:100%;height:96%}
+.diapo[data-id="capa"] .capa__suelo line{stroke:#3A2E22;stroke-width:1.2}
+.diapo[data-id="capa"] .capa__cara{stroke:rgba(30,20,12,.55);stroke-width:1.3}
+.diapo[data-id="capa"] .capa__lado{stroke:none}
+/* los estratos se apilan al entrar, de la base a la cima */
+.diapo[data-id="capa"].anim-activa .capa__estrato{animation:capa-estrato 700ms var(--ease-expo) both;animation-delay:calc(450ms + var(--i)*70ms)}
+@keyframes capa-estrato{from{opacity:0;translate:0 30px}to{opacity:1;translate:0 0}}
+
+/* Con la app: la capa aumentada, recortada desde el divisor */
+.diapo[data-id="capa"] .capa__lado-app{position:absolute;inset:0;clip-path:inset(0 0 0 var(--corte));
+  background:radial-gradient(80% 70% at 55% 55%,rgba(230,186,98,.12),transparent 70%),#15120E}
+.diapo[data-id="capa"] .capa__trama{position:absolute;inset:0;opacity:.55;
+  background-image:linear-gradient(rgba(230,186,98,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(230,186,98,.09) 1px,transparent 1px);
+  background-size:calc(var(--u)*4) calc(var(--u)*4);background-position:center}
+.diapo[data-id="capa"] .capa__visor{position:absolute;inset:0}
+.diapo[data-id="capa"] .capa__lado-app>.esquinas{inset:calc(var(--u)*2.2);--esq-tam:calc(var(--u)*2.4)}
+.diapo[data-id="capa"] .capa__hud{position:absolute;right:calc(var(--u)*3.2);bottom:calc(var(--u)*2.8)}
+.diapo[data-id="capa"] .capa__hud .hud{color:var(--texto-2);text-align:right}
+
+/* Rótulos */
+.diapo[data-id="capa"] .capa__rot{position:absolute;top:calc(var(--u)*2.6);z-index:4;padding:.4em .85em;border-radius:var(--r-pleno);
+  font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.12em;text-transform:uppercase;line-height:1.2;
+  transition:opacity .4s}
+.diapo[data-id="capa"] .capa__rot--hoy{left:calc(var(--u)*3);color:var(--barro-claro);background:rgba(23,19,15,.72);border:1px solid rgba(201,167,124,.4)}
+.diapo[data-id="capa"] .capa__rot--app{right:calc(var(--u)*3);color:#1A140E;background:var(--oro)}
+.diapo[data-id="capa"] .capa--todo-app .capa__rot--hoy,.diapo[data-id="capa"] .capa--todo-hoy .capa__rot--app{opacity:0}
+
+/* El divisor y su manija */
+.diapo[data-id="capa"] .capa__divisor{position:absolute;top:0;bottom:0;left:var(--corte);width:0;z-index:3;pointer-events:none}
+.diapo[data-id="capa"] .capa__divisor i{position:absolute;top:0;bottom:0;left:-1px;width:2px;background:var(--oro);
+  box-shadow:0 0 12px 1px rgba(230,186,98,.7),0 0 40px 6px rgba(230,186,98,.18)}
+.diapo[data-id="capa"] .capa__manija{position:absolute;left:var(--corte);top:50%;z-index:5;translate:-50% -50%;
+  width:calc(var(--u)*4.4);height:calc(var(--u)*4.4);min-width:40px;min-height:40px;border-radius:50%;padding:0;cursor:ew-resize;
+  display:flex;align-items:center;justify-content:center;gap:0;color:#1A140E;font-size:calc(var(--u)*1.5);
+  background:var(--oro);border:2px solid #F4D892;box-shadow:0 0 0 6px rgba(230,186,98,.18),0 6px 18px rgba(0,0,0,.45);
+  transition:scale .25s var(--ease-resorte)}
+.diapo[data-id="capa"] .capa__manija:focus-visible{outline:2px solid var(--crema-app);outline-offset:4px}
+.diapo[data-id="capa"] .capa--arrastrando .capa__manija{scale:1.12}
+.diapo[data-id="capa"] .capa__ch{font-size:max(14px,calc(var(--u)*1.4))}
+.diapo[data-id="capa"] .capa__ch--der{transform:scaleX(-1)}
+
+.diapo[data-id="capa"] .capa__ayuda{display:flex;align-items:center;justify-content:center;gap:.6em;margin:0;font-family:var(--f-mono);
+  font-size:var(--t-etiqueta);letter-spacing:.1em;text-transform:uppercase;color:var(--texto-mute)}
+.diapo[data-id="capa"] .capa__mano{font-size:1.5em;color:var(--oro)}
+
+.modo-captura .diapo[data-id="capa"] .capa__estrato{animation:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="capa"].anim-activa .capa__estrato{animation:none}
+  .diapo[data-id="capa"] .capa__manija{transition:none}
+}
+
+/* Vertical: titular, comparador a todo el ancho y el texto debajo */
+@media (orientation:portrait){
+  .diapo[data-id="capa"] .capa{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="capa"] .capa__texto{display:contents}
+  .diapo[data-id="capa"] .cabeza{order:1}
+  .diapo[data-id="capa"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="capa"] .capa__escena{order:2;margin:var(--e-2) 0}
+  .diapo[data-id="capa"] .capa__marco{height:auto;aspect-ratio:4/5}
+  .diapo[data-id="capa"] .capa__lead{order:3;max-width:none}
+  .diapo[data-id="capa"] .capa__nota{order:4;max-width:none;margin-top:0}
+  .diapo[data-id="capa"] .capa__manija{width:48px;height:48px;font-size:18px}
+}
+@media (orientation:portrait) and (min-width:720px){
+  .diapo[data-id="capa"] .capa__marco{aspect-ratio:5/4}
+}

@@ -1,0 +1,121 @@
+/* 11 · Controles — ink. La capa RA del tour con su interfaz real (ARViewController.swift:118-216): la
+   tarjeta crema de Atrás y la de Info + Next. A la izquierda de teléfono, una lupa de la tarjeta derecha.
+   Tres candados se abren con los pasos (updateNextModelButton, ARViewController.swift:645-687):
+     1 · terminó la introducción → ▶ pasa a 100 %; un toque coloca el modelo: el ícono pasa a ⏭, aparece
+         Info y Next vuelve a 40 %, porque ahora también exige
+     2 · que termine el video del montículo, y
+     3 · estar a 25 m o menos del punto (AppConfig.guidedArrivalMeters) → ⏭ a 100 %.
+   La lectura de la opacidad (alpha 0.4 / 1.0) cuenta en vivo. ✓ es el ícono en el último punto. */
+(function () {
+  var el0 = null, relojes = [], cancelarNum = null, alfa = 40, pasoPrevio = 0;
+
+  function lupaHTML() {
+    return '<div class="pantalla" data-ancho="112" data-alto="180"><div class="app app--suelta ctl__lupa-app">' +
+      KitApp.botonesRA({ siguiente: 'play', bloqueado: true }) + '</div></div>';
+  }
+  function candado(n, texto) {
+    return '<li class="ctl__candado" data-n="' + n + '"><i class="ctl__paso" data-paso="' + n + '" aria-hidden="true"></i>' +
+      '<span class="ctl__lock" aria-hidden="true">' + Iconos.svg('lock', 'ctl__lock-c') + Iconos.svg('lock.open', 'ctl__lock-a') + '</span>' +
+      '<span class="ctl__candado-t">' + texto + '</span></li>';
+  }
+
+  /* Estado del botón en todas sus copias (lupa y teléfono) */
+  function boton(icono, bloqueado, info) {
+    el0.querySelectorAll('.ctl__lupa-app, .ctl__telefono .app').forEach(function (raiz) {
+      KitApp.siguienteRA(raiz, icono, bloqueado);
+      var i = raiz.querySelector('.app-ra__boton--info'); if (i) i.hidden = !info;
+    });
+    el0.setAttribute('data-icono', icono);
+    el0.classList.toggle('ctl--libre', !bloqueado);
+    numero(bloqueado ? 40 : 100);
+  }
+  function numero(v, instantaneo) {
+    if (cancelarNum) { cancelarNum(); cancelarNum = null; }
+    var e = el0.querySelector('.ctl__alfa'), desde = alfa;
+    if (instantaneo || Deck.quieto() || v === alfa) { alfa = v; e.textContent = v; return; }
+    cancelarNum = Deck.tween(650, function (k) { alfa = Math.round(desde + (v - desde) * k); e.textContent = alfa; }, null, 'salida');
+  }
+  function candados(n) {
+    el0.querySelectorAll('.ctl__candado').forEach(function (li) { li.classList.toggle('ctl__candado--abierto', +li.getAttribute('data-n') <= n); });
+  }
+  function limpiar() {
+    relojes.forEach(clearTimeout); relojes = [];
+    if (cancelarNum) { cancelarNum(); cancelarNum = null; }
+  }
+  function toque() {
+    el0.classList.remove('ctl--toque'); void el0.offsetWidth; el0.classList.add('ctl--toque');
+  }
+
+  /* Lleva la escena al paso n; animado solo hacia adelante */
+  function irA(n, instantaneo) {
+    limpiar();
+    candados(n);
+    if (instantaneo) {
+      if (n === 0) boton('play', true, false);
+      else boton('siguiente', n < 3, true);
+      numero(n >= 3 ? 100 : 40, true);
+      return;
+    }
+    if (n === 1) {
+      boton('play', false, false);                              /* la intro terminó: ▶ se habilita */
+      relojes.push(setTimeout(toque, 1250));                    /* un toque coloca el modelo */
+      relojes.push(setTimeout(function () { boton('siguiente', true, true); }, 1550));
+    } else if (n === 0) boton('play', true, false);
+    else boton('siguiente', n < 3, true);
+  }
+
+  Presentacion.diapositiva({
+    id: 'controles',
+    titulo: 'Avanzar exige condiciones',
+    seccion: 'Realidad aumentada',
+    tema: 'ink',
+    transicion: 'lateral',
+    resumen: 'Tres condiciones para el botón Next',
+    html: `
+      <div class="lienzo ctl" data-icono="play">
+        <div class="ctl__texto">
+          ${Deck.cabeza('Controles en realidad aumentada', 'Avanzar al siguiente punto exige tres condiciones.')}
+          <ol class="ctl__candados">
+            ${candado(1, 'La introducción terminó')}
+            ${candado(2, 'El video del montículo terminó')}
+            ${candado(3, 'A 25 m o menos del punto')}
+          </ol>
+        </div>
+
+        <div class="ctl__escena">
+          <div class="ctl__lado">
+            <div class="ctl__lupa" data-anim="izquierda" style="--retraso:380ms">
+              <div class="ctl__lupa-caja">${lupaHTML()}<span class="ctl__onda" aria-hidden="true"></span></div>
+              ${Motivos.esquinas()}
+            </div>
+            <div class="ctl__lectura" data-anim="subir" style="--retraso:520ms">
+              <p class="ctl__lectura-t hud"><b>Next</b> · opacidad</p>
+              <p class="ctl__lectura-n"><span class="ctl__alfa">40</span><small>%</small></p>
+              <ol class="ctl__iconos" aria-label="Ícono del botón Next">
+                <li data-icono="play"><span class="ctl__ic">${Iconos.svg('play.fill')}</span><span>coloca el modelo</span></li>
+                <li data-icono="siguiente"><span class="ctl__ic">${Iconos.svg('forward.end.fill')}</span><span>siguiente punto</span></li>
+                <li data-icono="fin"><span class="ctl__ic">${Iconos.svg('checkmark')}</span><span>termina el recorrido</span></li>
+              </ol>
+            </div>
+          </div>
+          <div class="ctl__telefono-caja" data-anim="derecha" style="--retraso:120ms">
+            ${KitApp.telefono(KitApp.camara() + KitApp.botonesRA({ siguiente: 'play', bloqueado: true }) +
+              KitApp.recuadro({ modo: 'video', guia: 'img/guia-bienvenida.png', plano: true }), { clase: 'ctl__telefono', estado: true })}
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el.querySelector('.ctl');
+      var n = Deck.paso();
+      pasoPrevio = n;
+      alfa = 40;
+      irA(n, true);
+    },
+    alPaso: function (el, n) {
+      var atras = n < pasoPrevio; pasoPrevio = n;
+      irA(n, atras || Deck.quieto());
+    },
+    alSalir: function () { limpiar(); }
+  });
+})();

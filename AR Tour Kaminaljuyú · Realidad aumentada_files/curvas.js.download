@@ -1,0 +1,290 @@
+/* Curvas de nivel: el motivo del levantamiento. Sin dependencias (usa Deck.azar si existe).
+
+   1. Campo de montículos procedural → SVG de curvas de nivel (fondos, el «hoy» de un montículo):
+        Curvas.svg({ semilla: 4, montes: [{ x:.5, y:.55, rx:.3, ry:.22, h:1, meseta:2.4, rot:-.3 }],
+                     niveles: 12, ancho: 1600, alto: 1000, clase: 'mi-curva' })
+      Sin `montes`, siembra un campo de varios montículos con la semilla.
+   2. Curvas de un modelo 3D real (Modelos.m7, Modelos.m12…), vistas desde arriba:
+        Curvas.deModelo(Modelos.m7, 10)  → [{ k, h, lineas: [[[x,z],…],…] }]  (x,z en −1…1)
+        Curvas.svgModelo(Modelos.m7, { niveles: 10, tam: 400 })  → SVG listo para insertar
+   3. Corte de una malla por planos horizontales (lo usa visor3d.js):
+        Curvas.cortar(modelo, niveles) → { H, n, seg: Float32Array [x1,z1,x2,z2…], h, k, tri }
+   4. Máscara para el suelo del fondo: Curvas.instalar() pone --curvas-fondo en <html>.
+
+   Los trazos van en `currentColor`: el color lo pone el CSS de quien lo usa. */
+window.Curvas = (function () {
+  'use strict';
+
+  function rng(semilla) {
+    if (window.Deck && Deck.azar) return Deck.azar(semilla);
+    var a = semilla >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Ruido de valor suave y periódico (se repite cada `per` celdas) */
+  function ruidoValor(semilla, per) {
+    var al = rng(semilla), tabla = [];
+    for (var i = 0; i < per * per; i++) tabla.push(al());
+    function v(i, j) { i = ((i % per) + per) % per; j = ((j % per) + per) % per; return tabla[j * per + i]; }
+    function s(t) { return t * t * (3 - 2 * t); }
+    return function (x, y) {
+      var i = Math.floor(x), j = Math.floor(y), fx = s(x - i), fy = s(y - j);
+      var a = v(i, j), b = v(i + 1, j), c = v(i, j + 1), d = v(i + 1, j + 1);
+      return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+    };
+  }
+
+  /* Campo escalar en [0,1]×[0,1]. periodico: el campo se repite en los bordes (para mosaicos). */
+  function campo(op) {
+    var al = rng(op.semilla || 1);
+    var montes = op.montes;
+    if (!montes) {
+      montes = [];
+      var n = op.cuantos || 7;
+      for (var i = 0; i < n; i++) {
+        montes.push({ x: al(), y: al(), rx: .07 + al() * .12, ry: .06 + al() * .1, h: .45 + al() * .55,
+          meseta: 1.6 + al() * 1.6, rot: al() * Math.PI });
+      }
+    }
+    var amp = op.ruido == null ? .1 : op.ruido;
+    var r1 = ruidoValor((op.semilla || 1) * 7 + 3, 8), r2 = ruidoValor((op.semilla || 1) * 13 + 5, 16);
+    var per = !!op.periodico;
+    var asp = op.aspecto || 1;  /* ancho/alto: corrige para que los montes no salgan estirados */
+    return function (x, y) {
+      var z = 0;
+      for (var i = 0; i < montes.length; i++) {
+        var m = montes[i], dx = x - m.x, dy = y - m.y;
+        if (per) { dx -= Math.round(dx); dy -= Math.round(dy); }
+        dx *= asp;
+        var c = Math.cos(m.rot || 0), s = Math.sin(m.rot || 0);
+        var u = (dx * c + dy * s) / m.rx, w = (-dx * s + dy * c) / m.ry;
+        var d2 = u * u + w * w, p = m.meseta || 2;
+        z += m.h * Math.exp(-Math.pow(d2, p / 2));
+      }
+      if (amp) z += amp * ((r1(x * 8, y * 8) - .5) + .5 * (r2(x * 16, y * 16) - .5));
+      return z;
+    };
+  }
+
+  /* Cuadrados que marchan: segmentos del nivel `nivel` sobre una rejilla nx×ny de valores */
+  function marchar(vals, nx, ny, nivel, W, H) {
+    var segs = [], cw = W / (nx - 1), ch = H / (ny - 1);
+    function v(i, j) { return vals[j * nx + i]; }
+    function lerp(a, b) { var d = b - a; return d === 0 ? .5 : (nivel - a) / d; }
+    for (var j = 0; j < ny - 1; j++) {
+      for (var i = 0; i < nx - 1; i++) {
+        var a = v(i, j), b = v(i + 1, j), c = v(i + 1, j + 1), d = v(i, j + 1);
+        var caso = (a >= nivel ? 8 : 0) | (b >= nivel ? 4 : 0) | (c >= nivel ? 2 : 0) | (d >= nivel ? 1 : 0);
+        if (caso === 0 || caso === 15) continue;
+        var x0 = i * cw, y0 = j * ch;
+        var T = [x0 + lerp(a, b) * cw, y0], R = [x0 + cw, y0 + lerp(b, c) * ch],
+            B = [x0 + lerp(d, c) * cw, y0 + ch], L = [x0, y0 + lerp(a, d) * ch];
+        var centro = (a + b + c + d) / 4 >= nivel;
+        switch (caso) {
+          case 1: case 14: segs.push(L, B); break;
+          case 2: case 13: segs.push(B, R); break;
+          case 3: case 12: segs.push(L, R); break;
+          case 4: case 11: segs.push(T, R); break;
+          case 6: case 9: segs.push(T, B); break;
+          case 7: case 8: segs.push(L, T); break;
+          case 5: if (centro) { segs.push(L, T, B, R); } else { segs.push(L, B, T, R); } break;
+          case 10: if (centro) { segs.push(T, R, L, B); } else { segs.push(L, T, B, R); } break;
+        }
+      }
+    }
+    return segs;
+  }
+
+  /* Une segmentos sueltos [p,q,p,q…] en polilíneas */
+  function unir(segs, tol) {
+    tol = tol || 1e-3;
+    var inv = 1 / tol, mapa = {}, usados = [], n = segs.length / 2, lineas = [];
+    function clave(p) { return Math.round(p[0] * inv) + ',' + Math.round(p[1] * inv); }
+    for (var s = 0; s < n; s++) {
+      [clave(segs[2 * s]), clave(segs[2 * s + 1])].forEach(function (k) { (mapa[k] = mapa[k] || []).push(s); });
+    }
+    function siguiente(p, menos) {
+      var l = mapa[clave(p)] || [];
+      for (var i = 0; i < l.length; i++) if (!usados[l[i]] && l[i] !== menos) return l[i];
+      return -1;
+    }
+    for (var s0 = 0; s0 < n; s0++) {
+      if (usados[s0]) continue;
+      usados[s0] = true;
+      var linea = [segs[2 * s0], segs[2 * s0 + 1]];
+      /* hacia adelante */
+      var cola = linea[1], k;
+      while ((k = siguiente(cola, -1)) >= 0) {
+        usados[k] = true;
+        var a = segs[2 * k], b = segs[2 * k + 1];
+        cola = clave(a) === clave(cola) ? b : a;
+        linea.push(cola);
+      }
+      /* hacia atrás */
+      var cabeza = linea[0];
+      while ((k = siguiente(cabeza, -1)) >= 0) {
+        usados[k] = true;
+        var a2 = segs[2 * k], b2 = segs[2 * k + 1];
+        cabeza = clave(a2) === clave(cabeza) ? b2 : a2;
+        linea.unshift(cabeza);
+      }
+      lineas.push(linea);
+    }
+    return lineas;
+  }
+
+  function f1(n) { return Math.round(n * 10) / 10; }
+
+  /* Polilínea → trazo suave (Catmull-Rom a Bézier). Cierra si los extremos coinciden. */
+  function trazo(p) {
+    if (p.length < 2) return '';
+    var cerrada = p.length > 3 && Math.abs(p[0][0] - p[p.length - 1][0]) < 1e-2 && Math.abs(p[0][1] - p[p.length - 1][1]) < 1e-2;
+    var q = cerrada ? p.slice(0, -1) : p, n = q.length;
+    if (n < 3) return 'M' + f1(q[0][0]) + ' ' + f1(q[0][1]) + 'L' + f1(q[n - 1][0]) + ' ' + f1(q[n - 1][1]);
+    function P(i) { if (cerrada) return q[(i + n) % n]; return q[Math.max(0, Math.min(n - 1, i))]; }
+    var d = 'M' + f1(q[0][0]) + ' ' + f1(q[0][1]), fin = cerrada ? n : n - 1;
+    for (var i = 0; i < fin; i++) {
+      var p0 = P(i - 1), p1 = P(i), p2 = P(i + 1), p3 = P(i + 2);
+      d += 'C' + f1(p1[0] + (p2[0] - p0[0]) / 6) + ' ' + f1(p1[1] + (p2[1] - p0[1]) / 6) + ' ' +
+                 f1(p2[0] - (p3[0] - p1[0]) / 6) + ' ' + f1(p2[1] - (p3[1] - p1[1]) / 6) + ' ' +
+                 f1(p2[0]) + ' ' + f1(p2[1]);
+    }
+    return d + (cerrada ? 'Z' : '');
+  }
+
+  /* Líneas de nivel de un campo: [{k, nivel, lineas:[[[x,y]…]]}] en píxeles de W×H */
+  function lineas(op) {
+    op = op || {};
+    var W = op.ancho || 1600, H = op.alto || 1000, res = op.resolucion || 120;
+    var nx = res + 1, ny = Math.max(8, Math.round(res * H / W)) + 1;
+    var f = campo(Object.assign({ aspecto: W / H }, op)), vals = new Float32Array(nx * ny);
+    var min = Infinity, max = -Infinity;
+    for (var j = 0; j < ny; j++) for (var i = 0; i < nx; i++) {
+      var z = f(i / (nx - 1), j / (ny - 1)); vals[j * nx + i] = z;
+      if (z < min) min = z; if (z > max) max = z;
+    }
+    var N = op.niveles || 12, salida = [];
+    var base = op.base == null ? min + (max - min) * .06 : op.base;
+    for (var k = 0; k < N; k++) {
+      var nivel = base + (max - base) * (k + .5) / N;
+      var segs = marchar(vals, nx, ny, nivel, W, H);
+      if (segs.length) salida.push({ k: k, nivel: nivel, lineas: unir(segs, W / nx / 50) });
+    }
+    return salida;
+  }
+
+  function esc(s) { return String(s).replace(/"/g, '&quot;'); }
+
+  /* SVG de curvas de nivel. op: semilla, montes, niveles, ancho, alto, resolucion, ruido,
+     maestra (cada cuántas curvas una más gruesa; 0 = ninguna), grosor, clase, ajuste ('slice'|'meet') */
+  function svg(op) {
+    op = op || {};
+    var W = op.ancho || 1600, H = op.alto || 1000, g = op.grosor || 1.2, cada = op.maestra == null ? 4 : op.maestra;
+    var niveles = lineas(op), h = '';
+    niveles.forEach(function (nv) {
+      var d = nv.lineas.map(trazo).join('');
+      var maestra = cada && (nv.k + 1) % cada === 0;
+      h += '<path class="curvas__n' + (maestra ? ' curvas__n--maestra' : '') + '" data-nivel="' + nv.k + '" d="' + d + '"' +
+        (maestra ? ' stroke-width="' + (g * 1.9) + '"' : '') + '/>';
+    });
+    return '<svg class="curvas' + (op.clase ? ' ' + esc(op.clase) : '') + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid ' +
+      (op.ajuste || 'slice') + '" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="' + g +
+      '" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke">' + h + '</g></svg>';
+  }
+
+  /* Máscara (trazos blancos) de un mosaico que se repite sin costuras */
+  function mascara(op) {
+    op = Object.assign({ semilla: 23, ancho: 1200, alto: 1200, niveles: 9, cuantos: 6, periodico: true, resolucion: 110, grosor: 2.2, maestra: 3, ruido: .08 }, op || {});
+    var s = svg(op).replace('stroke="currentColor"', 'stroke="#fff"').replace(' vector-effect="non-scaling-stroke"', '');
+    s = s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+    return 'url("data:image/svg+xml,' + encodeURIComponent(s) + '")';
+  }
+
+  var instalado = false;
+  function instalar(op) {
+    if (instalado) return;
+    instalado = true;
+    try { document.documentElement.style.setProperty('--curvas-fondo', mascara(op)); } catch (e) {}
+  }
+
+  /* ── Corte de una malla 3D por planos horizontales ─────────────────────────
+     Devuelve los segmentos de cada curva de nivel, centrados en x/z como en visor3d. */
+  var cacheCortes = {};
+  function cortar(modelo, niveles) {
+    var clave = (modelo.archivo || '') + ':' + niveles;
+    if (modelo.archivo && cacheCortes[clave]) return cacheCortes[clave];
+    var p = modelo.p, t = modelo.t, nT = t.length / 3;
+    var b = medidas(modelo), H = b.H, cx = b.cx, cz = b.cz;
+    var seg = [], hs = [], ks = [], tris = [];
+    var N = niveles || 12;
+    for (var k = 0; k < N; k++) {
+      var h = H * (k + .4) / N;
+      for (var i = 0; i < nT; i++) {
+        var ia = t[3 * i] * 3, ib = t[3 * i + 1] * 3, ic = t[3 * i + 2] * 3;
+        var ya = p[ia + 1], yb = p[ib + 1], yc = p[ic + 1];
+        if ((ya < h && yb < h && yc < h) || (ya > h && yb > h && yc > h)) continue;
+        var pts = [];
+        [[ia, ib], [ib, ic], [ic, ia]].forEach(function (e) {
+          var y1 = p[e[0] + 1], y2 = p[e[1] + 1];
+          if ((y1 - h) * (y2 - h) < 0) {
+            var s = (h - y1) / (y2 - y1);
+            pts.push(p[e[0]] + (p[e[1]] - p[e[0]]) * s - cx, p[e[0] + 2] + (p[e[1] + 2] - p[e[0] + 2]) * s - cz);
+          }
+        });
+        if (pts.length === 4) { seg.push(pts[0], pts[1], pts[2], pts[3]); hs.push(h); ks.push(k); tris.push(i); }
+      }
+    }
+    var r = { H: H, n: hs.length, seg: new Float32Array(seg), h: new Float32Array(hs), k: new Int16Array(ks), tri: new Int32Array(tris), niveles: N };
+    if (modelo.archivo) cacheCortes[clave] = r;
+    return r;
+  }
+
+  function medidas(modelo) {
+    if (modelo.__medidas) return modelo.__medidas;
+    var p = modelo.p, mnx = Infinity, mxx = -Infinity, mnz = Infinity, mxz = -Infinity, H = 0;
+    for (var i = 0; i < p.length; i += 3) {
+      if (p[i] < mnx) mnx = p[i]; if (p[i] > mxx) mxx = p[i];
+      if (p[i + 2] < mnz) mnz = p[i + 2]; if (p[i + 2] > mxz) mxz = p[i + 2];
+      if (p[i + 1] > H) H = p[i + 1];
+    }
+    var m = { H: H, cx: (mnx + mxx) / 2, cz: (mnz + mxz) / 2, ancho: mxx - mnx, fondo: mxz - mnz };
+    try { Object.defineProperty(modelo, '__medidas', { value: m }); } catch (e) {}
+    return m;
+  }
+
+  /* Curvas de un modelo vistas desde arriba, unidas en polilíneas (x,z en unidades del modelo) */
+  function deModelo(modelo, niveles) {
+    var c = cortar(modelo, niveles || 10), porNivel = {};
+    for (var i = 0; i < c.n; i++) {
+      var k = c.k[i];
+      (porNivel[k] = porNivel[k] || []).push([c.seg[4 * i], c.seg[4 * i + 1]], [c.seg[4 * i + 2], c.seg[4 * i + 3]]);
+    }
+    return Object.keys(porNivel).map(function (k) {
+      return { k: +k, h: c.H * (+k + .4) / c.niveles, lineas: unir(porNivel[k], 1e-4) };
+    });
+  }
+
+  /* SVG de las curvas de un modelo, centrado en un cuadrado de `tam`. op: niveles, tam, grosor, clase, giro (rad) */
+  function svgModelo(modelo, op) {
+    op = op || {};
+    var tam = op.tam || 400, g = op.grosor || 1.4, giro = op.giro || 0, m = tam * .46;
+    var c = Math.cos(giro), s = Math.sin(giro), h = '';
+    deModelo(modelo, op.niveles || 10).forEach(function (nv) {
+      var d = nv.lineas.map(function (l) {
+        return trazo(l.map(function (p) { return [tam / 2 + (p[0] * c - p[1] * s) * m, tam / 2 + (p[0] * s + p[1] * c) * m]; }));
+      }).join('');
+      h += '<path class="curvas__n" data-nivel="' + nv.k + '" d="' + d + '"/>';
+    });
+    return '<svg class="curvas curvas--modelo' + (op.clase ? ' ' + esc(op.clase) : '') + '" viewBox="0 0 ' + tam + ' ' + tam +
+      '" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="' + g +
+      '" stroke-linecap="round" stroke-linejoin="round">' + h + '</g></svg>';
+  }
+
+  return { campo: campo, lineas: lineas, svg: svg, trazo: trazo, unir: unir, mascara: mascara, instalar: instalar,
+           cortar: cortar, medidas: medidas, deModelo: deModelo, svgModelo: svgModelo };
+})();

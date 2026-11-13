@@ -1,0 +1,197 @@
+/* ═══════════════════════════════════════════════════════════════
+   Identidad de esta presentación: tokens, tipografía y motivos.
+   «La capa que falta»: un levantamiento arqueológico (papel crema,
+   curvas de nivel, barro) sobre el que la capa aumentada se dibuja
+   en oro. La paleta sale de la propia app: cacao, terracota, dorado
+   y crema; la tipografía también (Plus Jakarta Sans).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Fuentes locales (sin internet) ───────────────────────────── */
+@font-face{font-family:'Plus Jakarta Sans';font-weight:500;font-style:normal;font-display:block;
+  src:url('fuentes/plus-jakarta-500.ttf') format('truetype')}
+@font-face{font-family:'Plus Jakarta Sans';font-weight:700;font-style:normal;font-display:block;
+  src:url('fuentes/plus-jakarta-700.ttf') format('truetype')}
+@font-face{font-family:'IBM Plex Mono';font-weight:400;font-style:normal;font-display:block;
+  src:url('fuentes/plex-mono-400.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-weight:500;font-style:normal;font-display:block;
+  src:url('fuentes/plex-mono-500.woff2') format('woff2')}
+
+:root{
+  /* ── Color ─────────────────────────────────────────────── */
+  /* Cacao: el oscuro de la app (#1A1A1A/#2D2D2D), llevado a cálido */
+  --ink:#17130F; --ink-2:#221C16; --ink-3:#2D251D; --ink-line:#3A3027;
+  --on-ink:#F3EAD8; --on-ink-mute:#A89A84;
+  /* Papel del levantamiento: el crema de las tarjetas de la app */
+  --bone:#F5EBD6; --bone-2:#EADCBF; --bone-3:#E2D0AC; --bone-line:#D6C29C;
+  --on-bone:#2A1F16; --on-bone-mute:#6E5F4B;
+
+  --oro:#E6BA62;           /* la capa aumentada: lo que la app agrega (RA, guía, datos) */
+  --oro-claro:#F4D892;
+  --oro-hondo:#8F5F0A;     /* el mismo oro, legible sobre papel */
+  --oro-trazo:#B98424;     /* trazos y rellenos dorados sobre papel */
+  --terracota:#D15B33;     /* la app y el sitio: «Kaminaljuyú», los botones de la app */
+  --terracota-honda:#B4461F;
+  --barro:#8A6A4A; --barro-claro:#C9A77C; --barro-hondo:#5C4330;  /* lo físico: tierra, montículo */
+  --olivo:#9DB35A; --olivo-hondo:#566B1F;                         /* listo, resuelto */
+  --carmesi:#B3263A; --carmesi-claro:#F0566A;                     /* solo lo perdido */
+  --crema-app:#ECEBC8;     /* «AR Tour» del splash */
+
+  /* Nombres que usa el motor */
+  --accent:var(--oro-hondo);      /* la capa, sobre papel */
+  --accent-soft:var(--oro);       /* la capa, sobre oscuro */
+  --alert:var(--carmesi);
+  --ok:var(--olivo-hondo); --ok-soft:var(--olivo);
+
+  /* ── Fuentes ───────────────────────────────────────────── */
+  --f-titular:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-texto:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  --f-sistema:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;
+
+  /* ── Movimiento ────────────────────────────────────────── */
+  --ease-expo:cubic-bezier(.16,1,.3,1);
+  --ease-suave:cubic-bezier(.4,0,.2,1);
+  --ease-entra-sale:cubic-bezier(.65,0,.35,1);
+  --ease-resorte:cubic-bezier(.34,1.56,.64,1);
+  --ease-escaneo:cubic-bezier(.55,.06,.25,1);   /* la línea de escaneo: arranca lenta y se asienta */
+  --dur-rapida:180ms; --dur-media:420ms; --dur-lenta:900ms; --dur-tema:750ms;
+
+  /* ── Unidad de diseño ──────────────────────────────────────
+     1u = 1% del ancho, sin pasarse del alto disponible en 16:9.
+     1920×1080 → 19.2px · 1440×900 → 14.4px · 1280×720 → 12.8px      */
+  --u:min(1vw,1.78vh);
+
+  /* Escala tipográfica (todo en u, con mínimos legibles) */
+  --t-xl:calc(var(--u)*6.6);
+  --t-1:calc(var(--u)*4.4);
+  --t-2:calc(var(--u)*3.1);
+  --t-3:calc(var(--u)*2.05);
+  --t-lead:max(16px,calc(var(--u)*1.4));
+  --t-texto:max(15px,calc(var(--u)*1.12));
+  --t-chico:max(13px,calc(var(--u)*.92));
+  --t-etiqueta:max(12px,calc(var(--u)*.74));
+  --t-cifra:calc(var(--u)*8.2);
+
+  /* Espaciado */
+  --e-1:calc(var(--u)*.5); --e-2:calc(var(--u)*1); --e-3:calc(var(--u)*1.5);
+  --e-4:calc(var(--u)*2); --e-5:calc(var(--u)*3); --e-6:calc(var(--u)*4);
+  --e-7:calc(var(--u)*6); --e-8:calc(var(--u)*8);
+
+  /* Radios y bordes (la app usa 16, 20 y 25) */
+  --r-1:6px; --r-2:10px; --r-3:16px; --r-4:22px; --r-pleno:999px;
+  --borde:1px;
+}
+
+/* Tableta vertical: la unidad sale del ancho, con más cuerpo. */
+@media (orientation:portrait){
+  :root{--u:min(1.6vw,1.2vh)}
+}
+/* Teléfono vertical: unidad mayor; se permite desplazar dentro de la diapositiva. */
+@media (orientation:portrait) and (max-width:719px){
+  :root{--u:2.3vw;--t-xl:calc(var(--u)*6.4);--t-1:calc(var(--u)*4.5);--t-2:calc(var(--u)*3.4)}
+}
+
+/* ── Temas: cualquier elemento con data-tema define sus colores ──
+   --acento   oro legible (texto de la capa aumentada)
+   --oro-tema oro para trazos y rellenos (alambre, anillos, escaneo)
+   --app      terracota legible (la app, el sitio)
+   --barro-tema el montículo, la tierra
+   --resuelto olivo · --problema carmesí (solo lo perdido)            */
+[data-tema="ink"]{
+  --fondo:var(--ink); --superficie:var(--ink-2); --linea:var(--ink-line);
+  --texto:var(--on-ink); --texto-2:#D9CDB8; --texto-mute:var(--on-ink-mute);
+  --acento:var(--oro); --acento-fuerte:var(--oro); --oro-tema:var(--oro);
+  --app:var(--terracota); --barro-tema:var(--barro-claro);
+  --resuelto:var(--olivo); --problema:var(--carmesi-claro);
+  --trama-color:#2A231B; --curva-color:#3B3127;
+  --vidrio:rgba(34,28,22,.66); --vidrio-borde:rgba(243,234,216,.09);
+  color:var(--texto);
+}
+[data-tema="bone"]{
+  --fondo:var(--bone); --superficie:#FBF4E4; --linea:var(--bone-line);
+  --texto:var(--on-bone); --texto-2:#4A3B2C; --texto-mute:var(--on-bone-mute);
+  --acento:var(--oro-hondo); --acento-fuerte:var(--oro-trazo); --oro-tema:var(--oro-trazo);
+  --app:var(--terracota-honda); --barro-tema:var(--barro);
+  --resuelto:var(--olivo-hondo); --problema:var(--carmesi);
+  --trama-color:#E6D7B8; --curva-color:#DCC79F;
+  --vidrio:rgba(251,244,228,.76); --vidrio-borde:rgba(42,31,22,.1);
+  color:var(--texto);
+}
+
+/* ── Tipografía ─────────────────────────────────────────── */
+.titular{font-family:var(--f-titular);font-weight:700;font-size:var(--t-1);line-height:1.04;
+  letter-spacing:-.034em;max-width:17ch;margin:0;text-wrap:balance}
+.titular em{font-style:normal;color:var(--acento)}
+.titular em.t{color:var(--app)}
+.titular em.r{color:var(--problema)}
+.titular--xl{font-size:var(--t-xl);line-height:.98;letter-spacing:-.042em;max-width:14ch}
+.titular--sm{font-size:var(--t-2);line-height:1.08;letter-spacing:-.028em;max-width:21ch}
+.subtitulo{font-family:var(--f-titular);font-weight:700;font-size:var(--t-3);line-height:1.18;
+  letter-spacing:-.02em;margin:0;text-wrap:balance}
+.lead{font-family:var(--f-texto);font-size:var(--t-lead);line-height:1.46;font-weight:500;
+  color:var(--texto-2);max-width:36ch;margin:0;text-wrap:pretty}
+.texto{font-family:var(--f-texto);font-size:var(--t-texto);line-height:1.5;font-weight:500;color:var(--texto-2);
+  max-width:46ch;margin:0;text-wrap:pretty}
+.texto--mute{color:var(--texto-mute)}
+.mono{font-family:var(--f-mono);font-feature-settings:"zero" 0;letter-spacing:.01em}
+.etiqueta{display:inline-flex;align-items:center;gap:.9em;font-family:var(--f-mono);
+  font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--texto-mute);line-height:1.2;margin:0}
+/* El punto de la etiqueta es un nodo de levantamiento: oro con su anillo */
+.etiqueta--punto::before{content:'';width:.62em;height:.62em;border-radius:50%;flex:none;
+  background:var(--oro-tema,var(--oro));box-shadow:0 0 0 .32em color-mix(in srgb,var(--oro-tema,var(--oro)) 22%,transparent)}
+.etiqueta--alert::before{background:var(--problema);box-shadow:0 0 0 .32em color-mix(in srgb,var(--problema) 18%,transparent)}
+.etiqueta--ok::before{background:var(--resuelto);box-shadow:0 0 0 .32em color-mix(in srgb,var(--resuelto) 18%,transparent)}
+.etiqueta--app::before{background:var(--app);box-shadow:0 0 0 .32em color-mix(in srgb,var(--app) 18%,transparent)}
+.cifra{font-family:var(--f-titular);font-weight:700;font-size:var(--t-cifra);line-height:.9;
+  letter-spacing:-.045em;color:var(--acento);font-variant-numeric:lining-nums tabular-nums}
+.cifra--mono{font-family:var(--f-mono);font-weight:500;letter-spacing:-.04em}
+.acento{color:var(--acento)}
+.app-color{color:var(--app)}
+.problema{color:var(--problema)}
+.resuelto{color:var(--resuelto)}
+.tachado{color:var(--problema);text-decoration:line-through;text-decoration-thickness:.08em}
+
+/* ── Regla con nodo: una traza dorada que termina en un punto ── */
+.regla{--regla-color:var(--oro-tema,var(--oro));--regla-largo:calc(var(--u)*5.2);
+  --regla-grosor:max(2px,calc(var(--u)*.16));--regla-nodo:max(8px,calc(var(--u)*.7));
+  position:relative;display:block;width:var(--regla-largo);height:var(--regla-grosor);
+  background:var(--regla-color);border-radius:99px;margin-right:var(--regla-nodo);flex:none}
+.regla::after{content:'';position:absolute;right:calc(var(--regla-nodo)*-.5);top:50%;
+  width:var(--regla-nodo);height:var(--regla-nodo);border-radius:50%;transform:translate(0,-50%);
+  background:var(--regla-color)}
+.regla--larga{--regla-largo:calc(var(--u)*11)}
+.regla--alert{--regla-color:var(--problema)}
+.regla--ok{--regla-color:var(--resuelto)}
+.regla--app{--regla-color:var(--app)}
+
+/* ── Trama: la retícula del levantamiento, que se desvanece ── */
+.trama{position:absolute;inset:0;z-index:0;pointer-events:none;color:var(--trama-color,#2A231B);
+  background-image:linear-gradient(currentColor 1px,transparent 1px),
+                   linear-gradient(90deg,currentColor 1px,transparent 1px);
+  background-size:var(--trama-celda,calc(var(--u)*5)) var(--trama-celda,calc(var(--u)*5));
+  background-position:-1px -1px;
+  -webkit-mask-image:linear-gradient(180deg,#000 0%,transparent 72%);
+          mask-image:linear-gradient(180deg,#000 0%,transparent 72%)}
+.trama--radial{-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 0%,transparent 70%);
+                       mask-image:radial-gradient(ellipse at 50% 45%,#000 0%,transparent 70%)}
+
+.marca-sub{font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.2em;
+  text-transform:uppercase;font-weight:500;color:var(--texto-mute)}
+
+/* ── Chip técnico ── */
+.chip{display:inline-flex;align-items:center;gap:.8em;font-family:var(--f-mono);
+  font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+  padding:.85em 1.4em;border-radius:var(--r-pleno);border:1px solid var(--linea);
+  color:var(--texto-mute);background:color-mix(in srgb,var(--superficie,transparent) 60%,transparent);
+  line-height:1;white-space:nowrap}
+.chip--acento{color:var(--acento);border-color:color-mix(in srgb,var(--oro-tema) 55%,transparent)}
+.chip--app{color:var(--app);border-color:color-mix(in srgb,var(--app) 50%,transparent)}
+.chip--ok{color:var(--resuelto);border-color:color-mix(in srgb,var(--resuelto) 50%,transparent)}
+.chip--alert{color:var(--problema);border-color:color-mix(in srgb,var(--problema) 50%,transparent)}
+.chip .punto{width:.6em;height:.6em;border-radius:50%;background:currentColor}
+
+/* ── Grano: textura de papel encima de todo ── */
+.grano{position:absolute;inset:0;pointer-events:none;z-index:50;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+[data-tema="bone"] .grano,.grano--papel{opacity:.08;mix-blend-mode:multiply}

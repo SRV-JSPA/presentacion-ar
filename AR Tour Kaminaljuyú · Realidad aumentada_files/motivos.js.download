@@ -1,0 +1,40 @@
+/* Motivos del concepto en HTML, para no repetir marcado. Estilos en estilo.css.
+
+     Motivos.esquinas()                         → corchetes dorados de cámara en las 4 esquinas del padre
+     Motivos.esquinas('esquinas--mira')         → con cruz al centro
+     Motivos.rotulo('C-II-4', 'Acrópolis')      → rótulo de estructura del levantamiento
+     Motivos.rotulo('C-II-6', 'Montículo', 'rotulo--oro')
+     Motivos.hud([['N', '14.6313'], ['O', '90.5485']])  → lecturas en mono (clave en oro)
+     Motivos.escaneo()                          → línea de escaneo dorada (usa --escaneo 0..1)
+     Motivos.reticula({ cols: 8, filas: 5, x: ['90.5490', …], y: ['14.6316', …] })
+     Motivos.curvas({ semilla: 3, niveles: 10 }) → capa con curvas de nivel (Curvas.svg)
+
+   Todo lo que devuelve es decorativo (aria-hidden) salvo el rótulo y el HUD. */
+window.Motivos = (function () {
+  'use strict';
+  function esquinas(clase) {
+    return '<span class="esquinas' + (clase ? ' ' + clase : '') + '" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
+  }
+  function rotulo(codigo, nombre, clase) {
+    return '<span class="rotulo' + (clase ? ' ' + clase : '') + '"><b>' + codigo + '</b>' + (nombre ? '<span>' + nombre + '</span>' : '') + '</span>';
+  }
+  function hud(filas, clase) {
+    return '<div class="hud' + (clase ? ' ' + clase : '') + '">' + filas.map(function (f) {
+      return Array.isArray(f) ? '<div><b>' + f[0] + '</b> ' + f[1] + '</div>' : '<div>' + f + '</div>';
+    }).join('') + '</div>';
+  }
+  function escaneo(clase) { return '<span class="escaneo' + (clase ? ' ' + clase : '') + '" aria-hidden="true"></span>'; }
+  /* Coordenadas de la retícula: alrededor del centro del mapa del parque (MapViewRepresentable.swift:33-34) */
+  function reticula(op) {
+    op = op || {};
+    var cols = op.cols || 8, filas = op.filas || 5, h = '';
+    var xs = op.x || [], ys = op.y || [];
+    xs.forEach(function (t, i) { h += '<span class="reticula__x" style="left:' + ((i + 1) * 100 / cols).toFixed(3) + '%">' + t + '</span>'; });
+    ys.forEach(function (t, i) { h += '<span class="reticula__y" style="top:' + ((i + 1) * 100 / filas).toFixed(3) + '%">' + t + '</span>'; });
+    return '<div class="reticula' + (op.clase ? ' ' + op.clase : '') + '" style="--cols:' + cols + ';--filas:' + filas + '" aria-hidden="true">' + h + '</div>';
+  }
+  function curvas(op) {
+    return '<div class="curvas-capa' + (op && op.claseCapa ? ' ' + op.claseCapa : '') + '" aria-hidden="true" data-decorativo>' + Curvas.svg(op) + '</div>';
+  }
+  return { esquinas: esquinas, rotulo: rotulo, hud: hud, escaneo: escaneo, reticula: reticula, curvas: curvas };
+})();

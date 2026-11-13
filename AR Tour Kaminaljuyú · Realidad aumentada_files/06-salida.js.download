@@ -1,0 +1,173 @@
+/* 06 · Salida — bone. La pantalla real de controles del tour (TourControlsView.swift) en el teléfono y,
+   levantado de ella, el banner del punto de partida a tamaño legible. Primero espera la ubicación;
+   llega la primera lectura y la distancia cuenta hacia abajo como un odómetro (Int(dist): metros
+   enteros, truncados); al cruzar los 20 m (AppConfig.swift:8) el banner pasa de amarillo a verde con
+   los textos reales de LocalizedStrings.swift:63-67. Al lado, un radar con el anillo de 20 m y el punto
+   que camina hacia el inicio, sincronizado con el contador. */
+(function () {
+  var U = 2.7;                /* unidades de dibujo por metro */
+  var RADIO = 20, D0 = 34, D_FIN = 19.2;
+  var ANG = 218 * Math.PI / 180;   /* de dónde llega el caminante (abajo a la izquierda) */
+  var el0 = null, cancelar = null, relojes = [], estadoActual = '', metrosActual = -1;
+
+  function punto(d) { return [d * U * Math.cos(ANG), -d * U * Math.sin(ANG)]; }
+
+  /* Odómetro: decenas (3 → 2) y unidades (4 … 0), una posición por metro entero */
+  var METROS = []; for (var m = D0; m >= RADIO; m--) METROS.push(m);
+  function rueda() {
+    var dec = '<i>3</i><i>2</i>', uni = METROS.map(function (m) { return '<i>' + (m % 10) + '</i>'; }).join('');
+    return '<span class="salida__rueda" aria-hidden="true"><span class="salida__col"><span class="salida__pila salida__pila--dec">' + dec +
+      '</span></span><span class="salida__col"><span class="salida__pila salida__pila--uni">' + uni + '</span></span></span>';
+  }
+
+  /* El banner de la lupa: las dos caras (camina / listo) apiladas; la verde se abre en círculo desde su ícono */
+  function bannerLupa() {
+    var t = KitApp.TEXTOS.es;
+    return '<div class="app-banner app-banner--camina salida__cara salida__cara--camina">' + Iconos.svg('figure.walk') +
+        '<div class="app-banner__textos"><p class="app-banner__titulo">' + t.camina + '</p>' +
+        '<p class="app-banner__sub salida__sub"><span class="salida__sub-sin">' + t.esperando + '</span>' +
+        '<span class="salida__sub-lejos">Estás a ' + rueda() + '<span class="salida__m-texto">34</span>m del punto de partida</span></p></div></div>' +
+      '<div class="app-banner app-banner--listo salida__cara salida__cara--listo">' + Iconos.svg('checkmark.circle.fill') +
+        '<div class="app-banner__textos"><p class="app-banner__titulo">' + t.listo + '</p><p class="app-banner__sub">' + t.listoSub + '</p></div></div>';
+  }
+
+  function svgRadar() {
+    var g = '', i;
+    for (i = -100; i <= 100; i += 23.5) g += '<line x1="' + i.toFixed(1) + '" y1="-110" x2="' + i.toFixed(1) + '" y2="110"/><line x1="-110" y1="' + i.toFixed(1) + '" x2="110" y2="' + i.toFixed(1) + '"/>';
+    var marcas = '';
+    for (i = 0; i < 48; i++) {
+      var a = i * 7.5 * Math.PI / 180, r1 = 100, r2 = i % 4 ? 97.5 : 94.5;
+      marcas += '<line x1="' + (r1 * Math.sin(a)).toFixed(2) + '" y1="' + (-r1 * Math.cos(a)).toFixed(2) + '" x2="' + (r2 * Math.sin(a)).toFixed(2) + '" y2="' + (-r2 * Math.cos(a)).toFixed(2) + '"/>';
+    }
+    var p0 = punto(D0 + 2.8), p1 = punto(0);
+    return '<svg class="salida__svg" viewBox="-110 -110 220 220" aria-hidden="true">' +
+      '<defs><clipPath id="salida-disco"><circle r="100"/></clipPath></defs>' +
+      '<g class="salida__reticula" clip-path="url(#salida-disco)">' + g + '</g>' +
+      '<g class="salida__marco" data-anim="dibujar" style="--dur-dibujar:1300ms"><circle r="100"/></g>' +
+      '<g class="salida__marcas">' + marcas + '</g>' +
+      '<circle class="salida__guia-r" r="' + (10 * U) + '"/><circle class="salida__guia-r" r="' + (30 * U) + '"/>' +
+      '<line class="salida__senda" x1="' + p0[0].toFixed(2) + '" y1="' + p0[1].toFixed(2) + '" x2="' + p1[0].toFixed(2) + '" y2="' + p1[1].toFixed(2) + '"/>' +
+      '<g class="salida__zona"><circle class="salida__zona-relleno" r="' + RADIO * U + '"/><circle class="salida__zona-aro" r="' + RADIO * U + '"/>' +
+        '<circle class="salida__zona-onda" r="' + RADIO * U + '"/></g>' +
+      '<line class="salida__traza" x1="0" y1="0" x2="0" y2="0"/>' +
+      '<line class="salida__falta" x1="0" y1="0" x2="0" y2="0"/>' +
+      '<g class="salida__inicio"><circle r="3.4"/><path d="M-.6 -2.2V-15.5"/><path class="salida__bandera" d="M-.6 -15.5H8.6L6 -12.4 8.6 -9.3H-.6Z"/></g>' +
+      '<g class="salida__yo"><circle class="salida__ping" r="4"/><circle class="salida__yo-halo" r="6.5"/><circle class="salida__yo-punto" r="3.3"/></g>' +
+      '</svg>';
+  }
+
+  /* ── Estado ── */
+  function ponerMetros(m, instantaneo) {
+    if (!el0 || m === metrosActual) return;
+    metrosActual = m;
+    var k = Math.max(0, Math.min(METROS.length - 1, D0 - m));
+    var uni = el0.querySelector('.salida__pila--uni'), dec = el0.querySelector('.salida__pila--dec');
+    [uni, dec].forEach(function (p) { p.classList.toggle('salida__pila--quieta', !!instantaneo); });
+    uni.style.setProperty('--k', k);
+    dec.style.setProperty('--k', m >= 30 ? 0 : 1);
+    el0.querySelector('.salida__m-texto').textContent = m;
+    if (estadoActual === 'lejos') KitApp.actualizarBanner(el0.querySelector('.salida__telefono .app-banner'), { estado: 'lejos', metros: m });
+  }
+  function ponerEstado(e) {
+    if (!el0 || e === estadoActual) return;
+    estadoActual = e;
+    el0.setAttribute('data-estado', e);
+    KitApp.actualizarBanner(el0.querySelector('.salida__telefono .app-banner'), { estado: e, metros: Math.max(metrosActual, RADIO) });
+    var hud = el0.querySelector('.salida__estado');
+    if (hud) hud.textContent = e === 'sin' ? 'sin ubicación' : e === 'lejos' ? 'fuera del radio' : 'dentro del radio';
+  }
+  function caminante(d) {
+    var p = punto(d), svg = el0.querySelector('.salida__svg');
+    svg.querySelector('.salida__yo').setAttribute('transform', 'translate(' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + ')');
+    var a = punto(D0), tr = svg.querySelector('.salida__traza'), fa = svg.querySelector('.salida__falta');
+    tr.setAttribute('x1', a[0].toFixed(2)); tr.setAttribute('y1', a[1].toFixed(2));
+    tr.setAttribute('x2', p[0].toFixed(2)); tr.setAttribute('y2', p[1].toFixed(2));
+    fa.setAttribute('x1', p[0].toFixed(2)); fa.setAttribute('y1', p[1].toFixed(2));
+    var et = el0.querySelector('.salida__dist');
+    var q = punto(d / 2 + 3);
+    et.style.left = (50 + q[0] / 220 * 100).toFixed(2) + '%';
+    et.style.top = (50 + q[1] / 220 * 100).toFixed(2) + '%';
+    et.textContent = Math.floor(d) + ' m';
+  }
+  function d2(d, instantaneo) {
+    caminante(d);
+    var m = Math.floor(d);
+    if (d <= RADIO) { ponerMetros(RADIO, instantaneo); ponerEstado('listo'); }
+    else { ponerMetros(m, instantaneo); }
+  }
+  function limpiar() {
+    if (cancelar) { cancelar(); cancelar = null; }
+    relojes.forEach(clearTimeout); relojes = [];
+  }
+  function finalQuieto() {
+    limpiar();
+    estadoActual = '';
+    ponerEstado('lejos'); d2(D_FIN, true);
+    el0.classList.add('salida--fijo');
+  }
+  function reproducir() {
+    limpiar();
+    el0.classList.remove('salida--fijo');
+    estadoActual = ''; metrosActual = -1;
+    ponerMetros(D0, true);
+    ponerEstado('sin');
+    caminante(D0);
+    relojes.push(setTimeout(function () {
+      ponerEstado('lejos');
+      ponerMetros(D0, true);
+      el0.classList.remove('salida--ping'); void el0.offsetWidth; el0.classList.add('salida--ping');
+      relojes.push(setTimeout(function () {
+        cancelar = Deck.tween(4600, function (e) { d2(D0 + (D_FIN - D0) * e); }, null, 'suave');
+      }, 900));
+    }, 1500));
+  }
+
+  Presentacion.diapositiva({
+    id: 'salida',
+    titulo: 'Punto de partida',
+    seccion: 'La experiencia',
+    tema: 'bone',
+    transicion: 'caida',
+    resumen: 'El recorrido arranca a 20 m del inicio',
+    html: `
+      <div class="lienzo salida" data-estado="lejos">
+        <div class="salida__texto">
+          ${Deck.cabeza('Punto de partida', 'El recorrido arranca a 20 metros o menos del inicio.')}
+          <ul class="lista salida__lista" data-anim-grupo="subir" data-intervalo="110" style="--retraso:380ms">
+            <li data-e="lejos"><span>Fuera del radio: «Camina al punto de partida»</span></li>
+            <li data-e="listo"><span>Dentro: «Listo para iniciar»</span></li>
+            <li data-e="sin"><span>Sin ubicación: «Esperando ubicación GPS…»</span></li>
+          </ul>
+        </div>
+
+        <div class="salida__escena">
+          <div class="salida__lado">
+            <div class="salida__lupa" data-anim="bajar" style="--retraso:260ms">
+              <div class="salida__lupa-caja">
+                <div class="pantalla" data-ancho="358" data-alto="72"><div class="app app--suelta">${bannerLupa()}</div></div>
+              </div>
+              ${Motivos.esquinas()}
+              <div class="salida__hud hud" aria-hidden="true"><div><b>Compuerta</b> · ≤ 20 m</div><div>· <span class="salida__estado">fuera del radio</span></div></div>
+            </div>
+            <div class="salida__radar" data-anim="escala" style="--retraso:420ms">
+              ${svgRadar()}
+              <span class="salida__r20" aria-hidden="true">20 m</span>
+              <span class="salida__dist" aria-hidden="true">19 m</span>
+              <span class="salida__etq-inicio" aria-hidden="true">Punto de partida</span>
+              <span class="salida__norte" aria-hidden="true">N</span>
+            </div>
+          </div>
+          <div class="salida__telefono-caja" data-anim="subir" style="--retraso:120ms">
+            ${KitApp.telefono(KitApp.controles({ estado: 'lejos', metros: 34 }), { clase: 'salida__telefono', sombraClara: true, estado: true })}
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el.querySelector('.salida');
+      if (Deck.quieto()) { finalQuieto(); return; }
+      reproducir();
+    },
+    alSalir: function () { limpiar(); }
+  });
+})();

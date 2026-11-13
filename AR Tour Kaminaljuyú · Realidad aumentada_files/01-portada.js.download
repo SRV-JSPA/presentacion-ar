@@ -1,0 +1,63 @@
+/* 01 · Portada — ink. La Acrópolis real (Monticulo12.obj) en el visor 3D: entra como curvas de nivel
+   en el suelo, la línea de escaneo dorada la levanta y queda sólida con su alambre, girando lento.
+   La barra dorada bajo «Kaminaljuyú» (la del splash de la app) se llena al ritmo del escaneo.
+   La retícula de cámara enmarca el modelo con las lecturas del guion. La misma Acrópolis cierra en la 19. */
+(function () {
+  var visor = null;
+
+  Presentacion.diapositiva({
+    id: 'portada',
+    titulo: 'Portada',
+    seccion: 'Apertura',
+    tema: 'ink',
+    resumen: 'Qué es: un recorrido guiado con realidad aumentada',
+    html: `
+      <div class="lienzo portada">
+        <div class="portada__marco" data-decorativo aria-hidden="true">
+          <div class="portada__visor"></div>
+          <div class="portada__mira">
+            ${Motivos.esquinas()}
+            <div class="portada__hud portada__hud--coord" data-anim="aparecer" style="--retraso:1300ms">
+              ${Motivos.hud([['Parque', 'N 14.6313 · O 90.5485']])}
+            </div>
+            <div class="portada__hud portada__hud--rotulo" data-anim="escala" style="--retraso:4500ms">
+              ${Motivos.rotulo('C-II-4', 'Acrópolis', 'rotulo--oro')}
+            </div>
+            <div class="portada__hud portada__hud--obj" data-anim="aparecer" style="--retraso:2200ms">
+              ${Motivos.hud(['Monticulo12.obj · <i>1 746</i> vértices'])}
+            </div>
+          </div>
+        </div>
+
+        <div class="portada__texto">
+          <p class="etiqueta etiqueta--punto" data-anim="subir">Realidad aumentada · iOS · Exposición de curso</p>
+          <h1 class="portada__titulo">
+            <span class="portada__ar" data-anim="subir" style="--retraso:120ms">AR Tour</span>
+            <span class="portada__nombre" data-anim="subir" style="--retraso:220ms">Kaminaljuyú</span>
+            <span class="portada__barra" aria-hidden="true"><i></i></span>
+          </h1>
+          <p class="lead" data-anim="subir" style="--retraso:420ms">Un recorrido guiado con realidad aumentada, pensado para el Parque Arqueológico Kaminaljuyú.</p>
+          <p class="portada__pie" data-anim="aparecer" style="--retraso:700ms">Universidad del Valle de Guatemala · Facultad de Ingeniería · 2026</p>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      if (!visor) {
+        visor = Visor3D.crear(el.querySelector('.portada__visor'), {
+          modelo: 'm12', tono: 'ink', niveles: 14, giro: 2.35, inclinacion: .5, velocidad: .1,
+          encuadre: 1.18, desplazar: [.05, .03], grosor: 1.6, grosorCurvas: 1.4,
+          /* en pantallas táctiles, deslizar sobre el modelo cambia de diapositiva: no se gira con el dedo */
+          interactivo: !(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches)
+        });
+      }
+      visor.medir();
+      if (Deck.quieto()) { visor.final({ curvas: .16 }); return; }
+      /* revelar: curvas 0,25–2,1 s · escaneo 1,9–4,8 s · alambre desde 4,2 s (la barra del CSS va igual) */
+      visor.revelar({ retraso: 250, curvas: .16 });
+      visor.iniciar();
+    },
+    alSalir: function () {
+      if (visor) { visor.detener(); visor.cancelar(); }
+    }
+  });
+})();

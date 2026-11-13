@@ -1,0 +1,724 @@
+/* Visor 3D sin librerías para los modelos reales de la app (window.Modelos).
+   WebGL con sombreado plano por triángulo y una luz cálida; alambre dorado de las aristas de
+   quiebre; curvas de nivel que viajan con la línea de escaneo; suelo con retícula y sombra.
+   Si no hay WebGL (Chrome sin cabeza, equipos viejos), dibuja lo mismo en un canvas 2D.
+
+     var v = Visor3D.crear(host, { modelo: 'm12', tono: 'ink', velocidad: .14 });
+     v.medir();            // en alEntrar: mide el contenedor
+     v.revelar();          // curvas en el suelo → el escaneo dorado lo levanta → sólido con alambre
+     v.iniciar();          // giro lento y animaciones (no lo llames si Deck.quieto())
+     v.detener();          // en alSalir
+     v.final();            // estado final sin animar (Deck.quieto(), captura, movimiento reducido)
+
+   Campos animables (v.ahora(campos) · v.estado(campos, {ms, retraso, curva, alFin})):
+     corte    0..1  altura del escaneo: lo de arriba no se dibuja y en el corte brilla el oro
+     dibujo   0..1  cuánto de las curvas de nivel ya se trazó (de las bajas a las altas)
+     curvas   0..1  opacidad de las curvas de nivel · bajo: opacidad de las que ya «aterrizaron»
+     alambre  0..1  opacidad del alambre dorado
+     brillo   0..1  brillo de la banda dorada del corte · plano: 0..1 el plano de escaneo
+     suelo    0..1  retícula y sombra del suelo
+     armar    0..1  triángulos que ya aparecieron (por altura, con azar repetible)
+     opacidad 0..1  del sólido (un modelo «fantasma» < 1)
+     giro, inclinacion (rad) · zoom (0,1–5) */
+window.Visor3D = (function () {
+  'use strict';
+
+  var mqReducido = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+  function quieto() { return window.Deck && Deck.quieto ? Deck.quieto() : !!mqReducido.matches; }
+
+  var CURVAS = {
+    lineal: function (t) { return t; },
+    salida: function (t) { return 1 - Math.pow(1 - t, 3); },
+    suave: function (t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; },
+    escaneo: function (t) { return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; },
+    entra: function (t) { return t * t * t; }
+  };
+
+  function rng(semilla) {
+    var a = semilla >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function rgb(hex) {
+    var h = String(hex).replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255];
+  }
+  function clamp(x, a, b) { return x < a ? a : x > b ? b : x; }
+
+  /* ── Matrices (columna mayor, como las pide WebGL) ── */
+  function perspectiva(fov, asp, n, f) {
+    var t = 1 / Math.tan(fov / 2), nf = 1 / (n - f);
+    return [t / asp, 0, 0, 0, 0, t, 0, 0, 0, 0, (f + n) * nf, -1, 0, 0, 2 * f * n * nf, 0];
+  }
+  function mirar(o, c, u) {
+    var zx = o[0] - c[0], zy = o[1] - c[1], zz = o[2] - c[2], l = Math.hypot(zx, zy, zz) || 1;
+    zx /= l; zy /= l; zz /= l;
+    var xx = u[1] * zz - u[2] * zy, xy = u[2] * zx - u[0] * zz, xz = u[0] * zy - u[1] * zx;
+    l = Math.hypot(xx, xy, xz) || 1; xx /= l; xy /= l; xz /= l;
+    var yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+    return [xx, yx, zx, 0, xy, yy, zy, 0, xz, yz, zz, 0,
+      -(xx * o[0] + xy * o[1] + xz * o[2]), -(yx * o[0] + yy * o[1] + yz * o[2]), -(zx * o[0] + zy * o[1] + zz * o[2]), 1];
+  }
+  function mult(a, b) {
+    var r = new Array(16);
+    for (var c = 0; c < 4; c++) for (var f = 0; f < 4; f++) {
+      r[c * 4 + f] = a[f] * b[c * 4] + a[4 + f] * b[c * 4 + 1] + a[8 + f] * b[c * 4 + 2] + a[12 + f] * b[c * 4 + 3];
+    }
+    return r;
+  }
+
+  /* ── Geometría de un modelo (se calcula una vez y se guarda) ── */
+  function geometria(modelo) {
+    if (modelo.__geo) return modelo.__geo;
+    var md = Curvas.medidas(modelo), H = md.H, cx = md.cx, cz = md.cz;
+    var p = modelo.p, t = modelo.t, mats = modelo.m || [], cols = modelo.c || [[160, 140, 110]];
+    var nV = p.length / 3, nT = t.length / 3, P = new Float32Array(p.length), R = 0, i;
+    for (i = 0; i < nV; i++) {
+      P[3 * i] = p[3 * i] - cx; P[3 * i + 1] = p[3 * i + 1]; P[3 * i + 2] = p[3 * i + 2] - cz;
+      R = Math.max(R, Math.hypot(P[3 * i], P[3 * i + 2]));
+    }
+    var al = rng(11);
+    var triN = new Float32Array(nT * 3), triC = new Float32Array(nT * 3), triO = new Float32Array(nT);
+    var gPos = new Float32Array(nT * 9), gNor = new Float32Array(nT * 9), gCol = new Float32Array(nT * 9), gOrd = new Float32Array(nT * 3);
+    for (i = 0; i < nT; i++) {
+      var a = t[3 * i] * 3, b = t[3 * i + 1] * 3, c = t[3 * i + 2] * 3;
+      var e1x = P[b] - P[a], e1y = P[b + 1] - P[a + 1], e1z = P[b + 2] - P[a + 2];
+      var e2x = P[c] - P[a], e2y = P[c + 1] - P[a + 1], e2z = P[c + 2] - P[a + 2];
+      var nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x, l = Math.hypot(nx, ny, nz);
+      if (l < 1e-12) { nx = 0; ny = 1; nz = 0; } else { nx /= l; ny /= l; nz /= l; }
+      if (ny < -.2 && P[a + 1] < .01 && P[b + 1] < .01 && P[c + 1] < .01) { nx = -nx; ny = -ny; nz = -nz; }
+      var col = cols[mats[i]] || cols[0];
+      var cy = (P[a + 1] + P[b + 1] + P[c + 1]) / 3;
+      triN[3 * i] = nx; triN[3 * i + 1] = ny; triN[3 * i + 2] = nz;
+      triC[3 * i] = col[0] / 255; triC[3 * i + 1] = col[1] / 255; triC[3 * i + 2] = col[2] / 255;
+      triO[i] = clamp(cy / H * .8 + al() * .2, 0, 1);
+      [a, b, c].forEach(function (v, k) {
+        var o = i * 9 + k * 3;
+        gPos[o] = P[v]; gPos[o + 1] = P[v + 1]; gPos[o + 2] = P[v + 2];
+        gNor[o] = nx; gNor[o + 1] = ny; gNor[o + 2] = nz;
+        gCol[o] = triC[3 * i]; gCol[o + 1] = triC[3 * i + 1]; gCol[o + 2] = triC[3 * i + 2];
+        gOrd[i * 3 + k] = triO[i];
+      });
+    }
+    /* Aristas de quiebre: bordes sueltos y pliegues de más de 26° (vértices fundidos por posición) */
+    var canon = new Int32Array(nV), mapaV = {}, nC = 0;
+    for (i = 0; i < nV; i++) {
+      var k = Math.round(P[3 * i] * 4000) + ',' + Math.round(P[3 * i + 1] * 4000) + ',' + Math.round(P[3 * i + 2] * 4000);
+      if (mapaV[k] === undefined) mapaV[k] = nC++;
+      canon[i] = mapaV[k];
+    }
+    var aristas = {}, lista = [], triA = new Array(nT), umbral = Math.cos(26 * Math.PI / 180);
+    for (i = 0; i < nT; i++) {
+      for (var e = 0; e < 3; e++) {
+        var u = t[3 * i + e], w = t[3 * i + (e + 1) % 3], ca = canon[u], cb = canon[w];
+        if (ca === cb) continue;
+        var ke = ca < cb ? ca + '_' + cb : cb + '_' + ca;
+        var rec = aristas[ke] || (aristas[ke] = { a: u, b: w, caras: [] });
+        rec.caras.push(i);
+      }
+    }
+    Object.keys(aristas).forEach(function (ke) {
+      var rec = aristas[ke], f = rec.caras, incluir = f.length !== 2;
+      if (!incluir) {
+        var d = triN[3 * f[0]] * triN[3 * f[1]] + triN[3 * f[0] + 1] * triN[3 * f[1] + 1] + triN[3 * f[0] + 2] * triN[3 * f[1] + 2];
+        incluir = d < umbral;
+      }
+      if (!incluir) return;
+      var idx = lista.length / 2;
+      lista.push(rec.a, rec.b);
+      f.forEach(function (c) { (triA[c] = triA[c] || []).push(idx); });
+    });
+    modelo.__geo = { P: P, t: t, nV: nV, nT: nT, H: H, R: R, triN: triN, triC: triC, triO: triO, triA: triA,
+      gPos: gPos, gNor: gNor, gCol: gCol, gOrd: gOrd, aristas: new Int32Array(lista), nA: lista.length / 2 };
+    return modelo.__geo;
+  }
+
+  /* Cuatro cuadros de línea gruesa por segmento: 6 vértices (2 triángulos) */
+  function lineasGruesas(segs, nivel, orden) {
+    var n = segs.length / 6, aP = new Float32Array(n * 18), aQ = new Float32Array(n * 18),
+        lado = new Float32Array(n * 6), niv = new Float32Array(n * 6), ord = new Float32Array(n * 6);
+    var patron = [[0, 1], [0, -1], [1, -1], [0, -1], [1, 1], [1, -1]];  /* [extremo, lado] */
+    for (var s = 0; s < n; s++) {
+      for (var v = 0; v < 6; v++) {
+        var ext = patron[v][0], o = (s * 6 + v) * 3, i0 = s * 6 + ext * 3, i1 = s * 6 + (1 - ext) * 3;
+        aP[o] = segs[i0]; aP[o + 1] = segs[i0 + 1]; aP[o + 2] = segs[i0 + 2];
+        aQ[o] = segs[i1]; aQ[o + 1] = segs[i1 + 1]; aQ[o + 2] = segs[i1 + 2];
+        lado[s * 6 + v] = patron[v][1];
+        niv[s * 6 + v] = nivel ? nivel[s] : -1;
+        ord[s * 6 + v] = orden ? orden[s] : 0;
+      }
+    }
+    return { aP: aP, aQ: aQ, lado: lado, niv: niv, ord: ord, n: n * 6 };
+  }
+
+  /* ── Sombreadores ── (alta precisión donde exista: los uniformes compartidos deben coincidir) */
+  var PREC = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
+  var VS_SOLIDO = 'attribute vec3 aPos;attribute vec3 aNor;attribute vec3 aCol;attribute float aOrd;uniform mat4 uVP;' +
+    'varying vec3 vNor;varying vec3 vCol;varying float vY;varying float vOrd;' +
+    'void main(){vNor=aNor;vCol=aCol;vY=aPos.y;vOrd=aOrd;gl_Position=uVP*vec4(aPos,1.);}';
+  var FS_SOLIDO = PREC + 'varying vec3 vNor;varying vec3 vCol;varying float vY;varying float vOrd;' +
+    'uniform vec3 uLuz;uniform vec3 uCalido;uniform vec3 uOro;uniform float uCorte;uniform float uArmar;uniform float uBrillo;uniform float uAlto;uniform float uOpac;' +
+    'void main(){if(vY>uCorte||vOrd>uArmar)discard;vec3 n=normalize(vNor);if(!gl_FrontFacing)n=-n;' +
+    'float dif=max(dot(n,uLuz),0.);float cielo=.5+.5*n.y;' +
+    'vec3 c=vCol*(vec3(.19,.17,.15)+.24*cielo+uCalido*dif*.9);c*=.74+.26*clamp(vY/uAlto,0.,1.);' +
+    'float g=smoothstep(uCorte-uAlto*.05,uCorte,vY)*uBrillo;float g2=smoothstep(uCorte-uAlto*.55,uCorte,vY)*uBrillo*.24;' +
+    'c=mix(c,uOro,g2);c=mix(c,uOro*1.2+.08,g*.92);gl_FragColor=vec4(c*uOpac,uOpac);}';
+  var VS_LINEA = 'attribute vec3 aP;attribute vec3 aQ;attribute float aLado;attribute float aNiv;attribute float aOrd;' +
+    'uniform mat4 uVP;uniform vec2 uRes;uniform float uGrosor;uniform float uCorte;uniform float uSubir;' +
+    'varying float vY;varying float vOrd;varying float vLado;varying float vNiv;' +
+    'void main(){vec3 p=aP;vec3 q=aQ;if(uSubir>.5){float h=min(aNiv,uCorte);p.y=h;q.y=h;}' +
+    'vec4 a=uVP*vec4(p,1.);vec4 b=uVP*vec4(q,1.);vec2 sa=a.xy/a.w*uRes*.5;vec2 sb=b.xy/b.w*uRes*.5;' +
+    'vec2 d=sb-sa;float L=length(d);d=L>1e-4?d/L:vec2(1.,0.);vec2 n=vec2(-d.y,d.x);' +
+    'a.xy+=(n*aLado-d)*uGrosor*.5/(uRes*.5)*a.w;gl_Position=a;vY=p.y;vOrd=aOrd;vLado=aLado;vNiv=aNiv;}';
+  var FS_LINEA = PREC + 'varying float vY;varying float vOrd;varying float vLado;varying float vNiv;' +
+    'uniform vec4 uColor;uniform float uCorte;uniform float uDibujo;uniform float uSubir;uniform float uBajo;' +
+    'void main(){if(vOrd>uDibujo)discard;float a=uColor.a;' +
+    'if(uSubir>.5){if(vNiv<uCorte-.0001)a*=uBajo;}else if(vY>uCorte+.0005)discard;' +
+    'a*=1.-smoothstep(.4,1.,abs(vLado));gl_FragColor=vec4(uColor.rgb*a,a);}';
+  var VS_PLANO = 'attribute vec2 aXZ;uniform mat4 uVP;uniform float uY;uniform float uEsc;varying vec2 vXZ;' +
+    'void main(){vXZ=aXZ*uEsc;gl_Position=uVP*vec4(vXZ.x,uY,vXZ.y,1.);}';
+  var FS_SUELO = '#extension GL_OES_standard_derivatives : enable\n' + PREC + 'varying vec2 vXZ;' +
+    'uniform vec3 uLinea;uniform float uAlfa;uniform float uSombra;uniform float uRadio;uniform float uPaso;' +
+    'void main(){float r=length(vXZ);float fade=1.-smoothstep(uRadio*.45,uRadio*1.6,r);' +
+    'vec2 c=vXZ/uPaso;vec2 g=abs(fract(c-.5)-.5)/fwidth(c);float lin=1.-min(min(g.x,g.y),1.);' +
+    'float a=lin*.3*fade*uAlfa;float s=(1.-smoothstep(uRadio*.15,uRadio*1.08,r))*uSombra*uAlfa;' +
+    'gl_FragColor=vec4(uLinea*a,a+s*(1.-a));}';
+  var FS_ESCANEO = '#extension GL_OES_standard_derivatives : enable\n' + PREC + 'varying vec2 vXZ;' +
+    'uniform vec3 uOro;uniform float uAlfa;uniform float uRadio;' +
+    'void main(){float r=length(vXZ);float fade=1.-smoothstep(uRadio*.25,uRadio*1.25,r);' +
+    'vec2 c=vXZ/(uRadio*.125);vec2 g=abs(fract(c-.5)-.5)/fwidth(c);float lin=1.-min(min(g.x,g.y),1.);' +
+    'float a=(.07+lin*.3)*fade*uAlfa;gl_FragColor=vec4(uOro*a,a);}';
+
+  function compilar(gl, vs, fs) {
+    function sh(tipo, src) {
+      var s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+      return s;
+    }
+    var p = gl.createProgram();
+    gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    var u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS), i;
+    for (i = 0; i < n; i++) { var nu = gl.getActiveUniform(p, i).name; u[nu] = gl.getUniformLocation(p, nu); }
+    var a = {}; n = gl.getProgramParameter(p, gl.ACTIVE_ATTRIBUTES);
+    for (i = 0; i < n; i++) { var na = gl.getActiveAttrib(p, i).name; a[na] = gl.getAttribLocation(p, na); }
+    return { p: p, u: u, a: a };
+  }
+  function buffer(gl, datos) {
+    var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, datos, gl.STATIC_DRAW); return b;
+  }
+
+  var TONOS = {
+    ink: { oro: '#EEC676', brillo: '#F4D892', alambre: .9, curvas: .95, suelo: '#5E4E3B', sombra: .5, luzSuelo: 1 },
+    bone: { oro: '#A06E14', brillo: '#E6BA62', alambre: .85, curvas: .9, suelo: '#B8A07A', sombra: .2, luzSuelo: 1 }
+  };
+
+  /* ════════════════════════════════════════════════════════════ */
+  function crear(host, op) {
+    op = op || {};
+    var modelo = typeof op.modelo === 'string' ? window.Modelos[op.modelo] : op.modelo;
+    if (!modelo) throw new Error('Visor3D: no existe el modelo ' + op.modelo);
+    var geo = geometria(modelo);
+    var temaEl = host.closest ? host.closest('[data-tema]') : null;
+    var tono = TONOS[op.tono || (temaEl && temaEl.getAttribute('data-tema')) || 'ink'] || TONOS.ink;
+    var colores = Object.assign({}, tono, op.colores || {});
+    var oro = rgb(colores.oro), brilloOro = rgb(colores.brillo), lineaSuelo = rgb(colores.suelo);
+    var niveles = op.niveles || 12, corte = Curvas.cortar(modelo, niveles);
+
+    var campos = Object.assign({ corte: 1, dibujo: 1, curvas: 0, bajo: .3, alambre: 1, brillo: 0, plano: 0, suelo: op.suelo === false ? 0 : 1,
+      armar: 1, opacidad: 1, giro: op.giro == null ? .7 : op.giro, inclinacion: op.inclinacion == null ? .52 : op.inclinacion,
+      zoom: op.zoom || 1 }, op.estado || {});
+    var velocidad = op.velocidad == null ? .14 : op.velocidad;
+    var fov = (op.fov || 30) * Math.PI / 180, encuadre = op.encuadre || 1, desplazar = op.desplazar || [0, 0];
+    var grosor = op.grosor || 1.5, grosorCurvas = op.grosorCurvas || 1.5;
+
+    var canvas = document.createElement('canvas');
+    canvas.className = 'visor__lienzo';
+    canvas.setAttribute('aria-hidden', 'true');
+    host.appendChild(canvas);
+    host.classList.add('visor');
+    if (op.interactivo !== false) { host.classList.add('visor--interactivo'); canvas.setAttribute('data-sin-deslizar', ''); }
+
+    var ancho = 0, alto = 0, dpr = 1, gl = null, ctx2 = null, R = {}, vp = null, luz = [0, 1, 0];
+    if (!op.forzar2d) {
+      try {
+        gl = canvas.getContext('webgl', { antialias: true, alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: true }) ||
+             canvas.getContext('experimental-webgl', { antialias: true, alpha: true, premultipliedAlpha: true, preserveDrawingBuffer: true });
+        if (gl) prepararGL();
+      } catch (e) { try { console.warn('[Visor3D] WebGL no disponible, se usa 2D:', e.message); } catch (e2) {} gl = null; }
+    }
+    if (!gl) {
+      if (canvas.getContext('webgl')) { /* contexto perdido a medias: cambia de lienzo */
+        var c2 = document.createElement('canvas'); c2.className = canvas.className; c2.setAttribute('aria-hidden', 'true');
+        if (canvas.hasAttribute('data-sin-deslizar')) c2.setAttribute('data-sin-deslizar', '');
+        host.replaceChild(c2, canvas); canvas = c2;
+      }
+      ctx2 = canvas.getContext('2d');
+    }
+
+    function prepararGL() {
+      gl.getExtension('OES_standard_derivatives');
+      R.solido = compilar(gl, VS_SOLIDO, FS_SOLIDO);
+      R.linea = compilar(gl, VS_LINEA, FS_LINEA);
+      R.suelo = compilar(gl, VS_PLANO, FS_SUELO);
+      R.escaneo = compilar(gl, VS_PLANO, FS_ESCANEO);
+      R.bPos = buffer(gl, geo.gPos); R.bNor = buffer(gl, geo.gNor); R.bCol = buffer(gl, geo.gCol); R.bOrd = buffer(gl, geo.gOrd);
+      R.nSol = geo.nT * 3;
+      /* alambre */
+      var segs = new Float32Array(geo.nA * 6);
+      for (var i = 0; i < geo.nA; i++) {
+        var a = geo.aristas[2 * i] * 3, b = geo.aristas[2 * i + 1] * 3;
+        segs.set([geo.P[a], geo.P[a + 1], geo.P[a + 2], geo.P[b], geo.P[b + 1], geo.P[b + 2]], i * 6);
+      }
+      R.alambre = subirLineas(lineasGruesas(segs));
+      /* curvas de nivel */
+      var cs = new Float32Array(corte.n * 6), orden = new Float32Array(corte.n), al = rng(5);
+      for (var j = 0; j < corte.n; j++) {
+        var x1 = corte.seg[4 * j], z1 = corte.seg[4 * j + 1], x2 = corte.seg[4 * j + 2], z2 = corte.seg[4 * j + 3], h = corte.h[j];
+        cs.set([x1, h, z1, x2, h, z2], j * 6);
+        var ang = (Math.atan2(z1 + z2, x1 + x2) / (Math.PI * 2) + 1) % 1;
+        orden[j] = clamp(.04 + .66 * corte.k[j] / Math.max(1, niveles - 1) + .26 * ang + al() * .03, 0, 1);
+      }
+      R.curvas = subirLineas(lineasGruesas(cs, corte.h, orden));
+      R.bPlano = buffer(gl, new Float32Array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1]));
+    }
+    function subirLineas(L) {
+      return { aP: buffer(gl, L.aP), aQ: buffer(gl, L.aQ), lado: buffer(gl, L.lado), niv: buffer(gl, L.niv), ord: buffer(gl, L.ord), n: L.n };
+    }
+    function atributo(prog, nombre, b, tam) {
+      var loc = prog.a[nombre]; if (loc === undefined || loc < 0) return;
+      gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, tam, gl.FLOAT, false, 0, 0);
+    }
+    function soltarAtributos(prog) { for (var k in prog.a) if (prog.a[k] >= 0) gl.disableVertexAttribArray(prog.a[k]); }
+
+    if (gl) {
+      canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); }, false);
+    }
+
+    /* ── Cámara ── */
+    function camara() {
+      var H = geo.H, objetivo = [0, H * .36, 0];
+      var rb = Math.sqrt(geo.R * geo.R + Math.pow(H * .7, 2));
+      var asp = ancho / Math.max(1, alto);
+      var dv = rb / Math.sin(fov / 2), dh = rb / Math.sin(Math.atan(Math.tan(fov / 2) * asp));
+      var d = Math.max(dv, dh) * .92 * encuadre / clamp(campos.zoom, .1, 5);
+      var ci = Math.cos(campos.inclinacion), si = Math.sin(campos.inclinacion);
+      var ojo = [objetivo[0] + d * ci * Math.sin(campos.giro), objetivo[1] + d * si, objetivo[2] + d * ci * Math.cos(campos.giro)];
+      var proy = perspectiva(fov, asp, Math.max(.01, d - rb * 2.5), d + rb * 3);
+      if (desplazar[0] || desplazar[1]) proy = mult([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, desplazar[0], desplazar[1], 0, 1], proy);
+      vp = mult(proy, mirar(ojo, objetivo, [0, 1, 0]));
+      /* la luz acompaña al visitante: siempre llega desde arriba a la izquierda de la vista */
+      var g = campos.giro - .9, lx = Math.sin(g) * .62, lz = Math.cos(g) * .62, ly = .78, l = Math.hypot(lx, ly, lz);
+      luz = [lx / l, ly / l, lz / l];
+    }
+
+    function alturaCorte() { return campos.corte >= 1 ? geo.H * 1.02 + .001 : campos.corte * geo.H * 1.02; }
+
+    /* ── Dibujo WebGL ── */
+    function dibujarGL() {
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      var yc = alturaCorte(), res = [canvas.width, canvas.height];
+      /* suelo */
+      if (campos.suelo > .001) {
+        var s = R.suelo; gl.useProgram(s.p); gl.disable(gl.DEPTH_TEST);
+        gl.uniformMatrix4fv(s.u.uVP, false, vp); gl.uniform1f(s.u.uY, 0); gl.uniform1f(s.u.uEsc, geo.R * 2.2);
+        gl.uniform3fv(s.u.uLinea, lineaSuelo); gl.uniform1f(s.u.uAlfa, campos.suelo); gl.uniform1f(s.u.uSombra, colores.sombra);
+        gl.uniform1f(s.u.uRadio, geo.R); gl.uniform1f(s.u.uPaso, geo.R * .18);
+        atributo(s, 'aXZ', R.bPlano, 2); gl.drawArrays(gl.TRIANGLES, 0, 6); soltarAtributos(s);
+      }
+      /* sólido */
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
+      if (campos.corte > 0 && campos.armar > 0 && campos.opacidad > .001) {
+        var p = R.solido; gl.useProgram(p.p);
+        gl.enable(gl.POLYGON_OFFSET_FILL); gl.polygonOffset(1.5, 2);
+        gl.uniformMatrix4fv(p.u.uVP, false, vp); gl.uniform3fv(p.u.uLuz, luz); gl.uniform3fv(p.u.uCalido, [1, .93, .8]);
+        gl.uniform3fv(p.u.uOro, brilloOro); gl.uniform1f(p.u.uCorte, yc); gl.uniform1f(p.u.uArmar, campos.armar);
+        gl.uniform1f(p.u.uBrillo, campos.brillo); gl.uniform1f(p.u.uAlto, geo.H); gl.uniform1f(p.u.uOpac, campos.opacidad);
+        atributo(p, 'aPos', R.bPos, 3); atributo(p, 'aNor', R.bNor, 3); atributo(p, 'aCol', R.bCol, 3); atributo(p, 'aOrd', R.bOrd, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, R.nSol); soltarAtributos(p);
+        gl.disable(gl.POLYGON_OFFSET_FILL);
+      }
+      gl.depthMask(false);
+      var L = R.linea; gl.useProgram(L.p);
+      gl.uniformMatrix4fv(L.u.uVP, false, vp); gl.uniform2fv(L.u.uRes, res); gl.uniform1f(L.u.uCorte, yc);
+      /* alambre */
+      if (campos.alambre > .001 && campos.corte > 0) {
+        gl.uniform1f(L.u.uGrosor, grosor * dpr); gl.uniform1f(L.u.uSubir, 0); gl.uniform1f(L.u.uDibujo, 1); gl.uniform1f(L.u.uBajo, 1);
+        gl.uniform4fv(L.u.uColor, [oro[0], oro[1], oro[2], colores.alambre * campos.alambre * Math.min(1, campos.armar * 1.5)]);
+        dibujarLineas(L, R.alambre);
+      }
+      /* curvas */
+      if (campos.curvas > .001 && campos.dibujo > 0) {
+        gl.uniform1f(L.u.uGrosor, grosorCurvas * dpr); gl.uniform1f(L.u.uSubir, 1); gl.uniform1f(L.u.uDibujo, campos.dibujo);
+        gl.uniform1f(L.u.uBajo, campos.bajo);
+        gl.uniform4fv(L.u.uColor, [oro[0], oro[1], oro[2], colores.curvas * campos.curvas]);
+        dibujarLineas(L, R.curvas);
+      }
+      soltarAtributos(L);
+      /* plano de escaneo */
+      if (campos.plano > .001 && campos.corte > 0 && campos.corte < 1) {
+        var e = R.escaneo; gl.useProgram(e.p);
+        gl.uniformMatrix4fv(e.u.uVP, false, vp); gl.uniform1f(e.u.uY, yc); gl.uniform1f(e.u.uEsc, geo.R * 1.5);
+        gl.uniform3fv(e.u.uOro, oro); gl.uniform1f(e.u.uAlfa, campos.plano); gl.uniform1f(e.u.uRadio, geo.R * 1.2);
+        atributo(e, 'aXZ', R.bPlano, 2); gl.drawArrays(gl.TRIANGLES, 0, 6); soltarAtributos(e);
+      }
+      gl.depthMask(true);
+    }
+    function dibujarLineas(L, B) {
+      atributo(L, 'aP', B.aP, 3); atributo(L, 'aQ', B.aQ, 3); atributo(L, 'aLado', B.lado, 1);
+      atributo(L, 'aNiv', B.niv, 1); atributo(L, 'aOrd', B.ord, 1);
+      gl.drawArrays(gl.TRIANGLES, 0, B.n);
+    }
+
+    /* ── Dibujo 2D (respaldo): el mismo modelo, por pintor ── */
+    var cache2 = null;
+    function preparar2D() {
+      if (cache2) return cache2;
+      var porTri = new Array(geo.nT), al = rng(5);
+      for (var j = 0; j < corte.n; j++) {
+        var ang = (Math.atan2(corte.seg[4 * j + 1] + corte.seg[4 * j + 3], corte.seg[4 * j] + corte.seg[4 * j + 2]) / (Math.PI * 2) + 1) % 1;
+        var o = clamp(.04 + .66 * corte.k[j] / Math.max(1, niveles - 1) + .26 * ang + al() * .03, 0, 1);
+        (porTri[corte.tri[j]] = porTri[corte.tri[j]] || []).push(j);
+        corte.__orden = corte.__orden || new Float32Array(corte.n);
+        corte.__orden[j] = o;
+      }
+      cache2 = { curvasTri: porTri, scr: new Float32Array(geo.nV * 3), orden: new Int32Array(geo.nT), prof: new Float32Array(geo.nT) };
+      return cache2;
+    }
+    function proyectar(x, y, z, out, o) {
+      var m = vp, cx = m[0] * x + m[4] * y + m[8] * z + m[12], cy = m[1] * x + m[5] * y + m[9] * z + m[13],
+          cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      out[o] = (cx / cw * .5 + .5) * ancho; out[o + 1] = (1 - (cy / cw * .5 + .5)) * alto; out[o + 2] = cw;
+    }
+    var tmp = new Float32Array(3);
+    function css(c, a) { return 'rgba(' + Math.round(c[0] * 255) + ',' + Math.round(c[1] * 255) + ',' + Math.round(c[2] * 255) + ',' + a.toFixed(3) + ')'; }
+    function dibujar2D() {
+      var c = ctx2, k2 = preparar2D(), yc = alturaCorte(), H = geo.H, P = geo.P, i;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.clearRect(0, 0, ancho, alto);
+      c.lineJoin = 'round'; c.lineCap = 'round';
+      /* suelo: sombra y retícula */
+      if (campos.suelo > .001) {
+        var paso = geo.R * .18, lim = geo.R * 1.6, n = Math.ceil(lim / paso);
+        proyectar(0, 0, 0, tmp, 0); var c0x = tmp[0], c0y = tmp[1];
+        proyectar(geo.R, 0, 0, tmp, 0); var rx = Math.hypot(tmp[0] - c0x, tmp[1] - c0y);
+        proyectar(0, 0, geo.R, tmp, 0); var rz = Math.hypot(tmp[0] - c0x, tmp[1] - c0y);
+        var rr = Math.max(rx, rz) * 1.08, g = c.createRadialGradient(c0x, c0y, 0, c0x, c0y, rr);
+        g.addColorStop(0, 'rgba(0,0,0,' + (colores.sombra * campos.suelo) + ')'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.save(); c.translate(c0x, c0y); c.scale(1, Math.min(rx, rz) / Math.max(rx, rz)); c.translate(-c0x, -c0y);
+        c.fillStyle = g; c.beginPath(); c.arc(c0x, c0y, rr, 0, Math.PI * 2); c.fill(); c.restore();
+        c.lineWidth = .8;
+        for (var gx = -n; gx <= n; gx++) {
+          for (var gz = -n; gz < n; gz++) {
+            [[gx * paso, gz * paso, gx * paso, (gz + 1) * paso], [gz * paso, gx * paso, (gz + 1) * paso, gx * paso]].forEach(function (s) {
+              var mx = (s[0] + s[2]) / 2, mz = (s[1] + s[3]) / 2, r = Math.hypot(mx, mz);
+              var f = 1 - clamp((r - geo.R * .45) / (geo.R * 1.15), 0, 1);
+              if (f <= 0) return;
+              proyectar(s[0], 0, s[1], tmp, 0); var ax = tmp[0], ay = tmp[1];
+              proyectar(s[2], 0, s[3], tmp, 0);
+              c.strokeStyle = css(lineaSuelo, .34 * f * campos.suelo);
+              c.beginPath(); c.moveTo(ax, ay); c.lineTo(tmp[0], tmp[1]); c.stroke();
+            });
+          }
+        }
+      }
+      /* vértices a pantalla */
+      var scr = k2.scr;
+      for (i = 0; i < geo.nV; i++) proyectar(P[3 * i], P[3 * i + 1], P[3 * i + 2], scr, 3 * i);
+      /* triángulos visibles, de lejos a cerca */
+      var n2 = 0, t = geo.t;
+      var dibujarSolido = campos.corte > 0 && campos.armar > 0 && campos.opacidad > .001;
+      if (dibujarSolido) {
+        for (i = 0; i < geo.nT; i++) {
+          if (geo.triO[i] > campos.armar) continue;
+          var a = t[3 * i], b = t[3 * i + 1], d = t[3 * i + 2];
+          if (P[3 * a + 1] > yc && P[3 * b + 1] > yc && P[3 * d + 1] > yc) continue;
+          k2.prof[i] = scr[3 * a + 2] + scr[3 * b + 2] + scr[3 * d + 2];
+          k2.orden[n2++] = i;
+        }
+        var ord = Array.prototype.slice.call(k2.orden.subarray(0, n2));
+        ord.sort(function (x, y) { return k2.prof[y] - k2.prof[x]; });
+        c.globalAlpha = campos.opacidad;
+        var aA = colores.alambre * campos.alambre * Math.min(1, campos.armar * 1.5);
+        var aC = colores.curvas * campos.curvas * campos.bajo;
+        for (var q = 0; q < ord.length; q++) {
+          i = ord[q];
+          var poli = poligono(i, yc);
+          if (!poli) continue;
+          /* sombreado plano */
+          var nx = geo.triN[3 * i], ny = geo.triN[3 * i + 1], nz = geo.triN[3 * i + 2];
+          var ia = t[3 * i], ib = t[3 * i + 1], ic = t[3 * i + 2];
+          var ex1 = scr[3 * ib] - scr[3 * ia], ey1 = scr[3 * ib + 1] - scr[3 * ia + 1], ex2 = scr[3 * ic] - scr[3 * ia], ey2 = scr[3 * ic + 1] - scr[3 * ia + 1];
+          if (ex1 * ey2 - ey1 * ex2 > 0) { nx = -nx; ny = -ny; nz = -nz; }
+          var dif = Math.max(0, nx * luz[0] + ny * luz[1] + nz * luz[2]), cielo = .5 + .5 * ny;
+          var cy = (P[3 * ia + 1] + P[3 * ib + 1] + P[3 * ic + 1]) / 3, alt = .74 + .26 * clamp(cy / H, 0, 1);
+          var col = [], gb = 0, g2 = 0;
+          if (campos.brillo > 0) {
+            gb = clamp((cy - (yc - H * .07)) / (H * .07), 0, 1) * campos.brillo;
+            g2 = clamp((cy - (yc - H * .55)) / (H * .55), 0, 1) * campos.brillo * .24;
+          }
+          var luzC = [1, .93, .8];
+          for (var k = 0; k < 3; k++) {
+            var v = geo.triC[3 * i + k] * (([.19, .17, .15])[k] + .24 * cielo + luzC[k] * dif * .9) * alt;
+            v = v + (brilloOro[k] - v) * g2;
+            v = v + ((brilloOro[k] * 1.2 + .08) - v) * gb * .92;
+            col.push(clamp(v, 0, 1));
+          }
+          var cs = css(col, 1);
+          c.fillStyle = cs; c.strokeStyle = cs; c.lineWidth = .6;
+          c.beginPath(); c.moveTo(poli[0], poli[1]);
+          for (var pi = 2; pi < poli.length; pi += 2) c.lineTo(poli[pi], poli[pi + 1]);
+          c.closePath(); c.fill(); c.stroke();
+          /* alambre de este triángulo */
+          if (aA > .001 && geo.triA[i]) {
+            c.strokeStyle = css(oro, aA); c.lineWidth = grosor;
+            geo.triA[i].forEach(function (e) { segmento(geo.aristas[2 * e], geo.aristas[2 * e + 1], yc); });
+          }
+          /* curvas ya «aterrizadas» en este triángulo */
+          if (aC > .001 && campos.dibujo > 0 && k2.curvasTri[i]) {
+            c.strokeStyle = css(oro, aC); c.lineWidth = grosorCurvas;
+            k2.curvasTri[i].forEach(function (j) {
+              if (corte.h[j] > yc || corte.__orden[j] > campos.dibujo) return;
+              curva(j, corte.h[j]);
+            });
+          }
+        }
+        c.globalAlpha = 1;
+      }
+      /* curvas que todavía viajan con el escaneo (o todas, si no hay sólido) */
+      if (campos.curvas > .001 && campos.dibujo > 0) {
+        c.lineWidth = grosorCurvas;
+        c.strokeStyle = css(oro, colores.curvas * campos.curvas);
+        for (var j = 0; j < corte.n; j++) {
+          if (corte.__orden[j] > campos.dibujo) continue;
+          var h = corte.h[j];
+          if (dibujarSolido && h <= yc) continue;
+          curva(j, Math.min(h, yc));
+        }
+      }
+      /* plano de escaneo */
+      if (campos.plano > .001 && campos.corte > 0 && campos.corte < 1) {
+        var S = geo.R * 1.25, esq = [[-S, -S], [S, -S], [S, S], [-S, S]];
+        c.beginPath();
+        esq.forEach(function (e, n) { proyectar(e[0], yc, e[1], tmp, 0); if (n) c.lineTo(tmp[0], tmp[1]); else c.moveTo(tmp[0], tmp[1]); });
+        c.closePath();
+        c.fillStyle = css(oro, .07 * campos.plano); c.fill();
+        c.strokeStyle = css(oro, .32 * campos.plano); c.lineWidth = 1; c.stroke();
+        c.lineWidth = .7; c.strokeStyle = css(oro, .14 * campos.plano);
+        for (var gi = -3; gi <= 3; gi++) {
+          var u = gi * S / 4;
+          proyectar(u, yc, -S, tmp, 0); c.beginPath(); c.moveTo(tmp[0], tmp[1]); proyectar(u, yc, S, tmp, 0); c.lineTo(tmp[0], tmp[1]); c.stroke();
+          proyectar(-S, yc, u, tmp, 0); c.beginPath(); c.moveTo(tmp[0], tmp[1]); proyectar(S, yc, u, tmp, 0); c.lineTo(tmp[0], tmp[1]); c.stroke();
+        }
+      }
+
+      function segmento(va, vb, yc) {
+        var ya = P[3 * va + 1], yb = P[3 * vb + 1];
+        if (ya > yc && yb > yc) return;
+        var x1 = scr[3 * va], y1 = scr[3 * va + 1], x2 = scr[3 * vb], y2 = scr[3 * vb + 1];
+        if (ya > yc || yb > yc) {
+          var s = (yc - ya) / (yb - ya);
+          proyectar(P[3 * va] + (P[3 * vb] - P[3 * va]) * s, yc, P[3 * va + 2] + (P[3 * vb + 2] - P[3 * va + 2]) * s, tmp, 0);
+          if (ya > yc) { x1 = tmp[0]; y1 = tmp[1]; } else { x2 = tmp[0]; y2 = tmp[1]; }
+        }
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke();
+      }
+      function curva(j, h) {
+        proyectar(corte.seg[4 * j], h, corte.seg[4 * j + 1], tmp, 0); var x1 = tmp[0], y1 = tmp[1];
+        proyectar(corte.seg[4 * j + 2], h, corte.seg[4 * j + 3], tmp, 0);
+        c.beginPath(); c.moveTo(x1, y1); c.lineTo(tmp[0], tmp[1]); c.stroke();
+      }
+      /* triángulo en pantalla, recortado por el plano del escaneo */
+      function poligono(i, yc) {
+        var idx = [t[3 * i], t[3 * i + 1], t[3 * i + 2]], fuera = 0;
+        idx.forEach(function (v) { if (P[3 * v + 1] > yc) fuera++; });
+        if (!fuera) return [scr[3 * idx[0]], scr[3 * idx[0] + 1], scr[3 * idx[1]], scr[3 * idx[1] + 1], scr[3 * idx[2]], scr[3 * idx[2] + 1]];
+        var out = [];
+        for (var e = 0; e < 3; e++) {
+          var va = idx[e], vb = idx[(e + 1) % 3], ya = P[3 * va + 1], yb = P[3 * vb + 1];
+          if (ya <= yc) out.push(scr[3 * va], scr[3 * va + 1]);
+          if ((ya <= yc) !== (yb <= yc)) {
+            var s = (yc - ya) / (yb - ya);
+            proyectar(P[3 * va] + (P[3 * vb] - P[3 * va]) * s, yc, P[3 * va + 2] + (P[3 * vb + 2] - P[3 * va + 2]) * s, tmp, 0);
+            out.push(tmp[0], tmp[1]);
+          }
+        }
+        return out.length >= 6 ? out : null;
+      }
+    }
+
+    function dibujar() {
+      if (!ancho || !alto) medir();
+      if (!ancho || !alto) return;
+      camara();
+      if (gl) { if (gl.isContextLost()) return; dibujarGL(); } else dibujar2D();
+    }
+
+    /* ── Tamaño ── */
+    function medir() {
+      var w = canvas.offsetWidth || host.offsetWidth, h = canvas.offsetHeight || host.offsetHeight;
+      if (!w || !h) return false;
+      var d = Math.min(2, window.devicePixelRatio || 1);
+      if (w === ancho && h === alto && d === dpr) return false;
+      ancho = w; alto = h; dpr = d;
+      canvas.width = Math.round(w * d); canvas.height = Math.round(h * d);
+      dibujarLuego();
+      return true;
+    }
+    var obs = window.ResizeObserver ? new ResizeObserver(function () { medir(); }) : null;
+    if (obs) obs.observe(canvas);
+
+    /* ── Bucle y animación ── */
+    var activo = false, idBucle = 0, previo = 0, pausaGiro = 0, factorGiro = 1, tweens = [], idTween = 0, pendiente = 0;
+    function cuadro(ts) {
+      if (!activo) return;
+      var dt = Math.min(.05, (ts - previo) / 1000); previo = ts;
+      avanzarTweens(ts);
+      if (!arrastre && velocidad) {
+        if (pausaGiro > 0) pausaGiro -= dt; else factorGiro = Math.min(1, factorGiro + dt * .8);
+        campos.giro += velocidad * dt * (pausaGiro > 0 ? 0 : factorGiro);
+      }
+      dibujar();
+      idBucle = requestAnimationFrame(cuadro);
+    }
+    function iniciar() {
+      if (activo) return;
+      activo = true; previo = performance.now();
+      idBucle = requestAnimationFrame(cuadro);
+    }
+    function detener() { activo = false; cancelAnimationFrame(idBucle); }
+
+    function dibujarLuego() {
+      if (activo || pendiente) return;
+      pendiente = requestAnimationFrame(function () { pendiente = 0; dibujar(); });
+    }
+    function avanzarTweens(ts) {
+      if (!tweens.length) return false;
+      tweens = tweens.filter(function (tw) {
+        if (ts < tw.t0) return true;
+        if (tw.desde === null) tw.desde = campos[tw.campo];
+        var p = Math.min(1, (ts - tw.t0) / tw.ms), e = tw.curva(p);
+        campos[tw.campo] = tw.desde + (tw.hasta - tw.desde) * e;
+        if (p >= 1) { if (tw.alFin) tw.alFin(); return false; }
+        return true;
+      });
+      return true;
+    }
+    function tickTweens(ts) {
+      idTween = 0;
+      avanzarTweens(ts);
+      if (!activo) dibujar();
+      if (tweens.length) idTween = requestAnimationFrame(tickTweens);
+    }
+    function ahora(c) { Object.keys(c).forEach(function (k) { campos[k] = c[k]; }); dibujarLuego(); return api; }
+    function estado(c, o) {
+      o = o || {};
+      if (quieto() || !o.ms) { ahora(c); if (o.alFin) o.alFin(); return api; }
+      var t0 = performance.now() + (o.retraso || 0), curva = CURVAS[o.curva || 'salida'] || CURVAS.salida, ks = Object.keys(c);
+      ks.forEach(function (k, n) {
+        tweens = tweens.filter(function (tw) { return tw.campo !== k || tw.t0 < t0 - 1; });
+        tweens.push({ campo: k, desde: null, hasta: c[k], t0: t0, ms: o.ms, curva: curva, alFin: n === ks.length - 1 ? o.alFin : null });
+      });
+      if (!idTween) idTween = requestAnimationFrame(tickTweens);
+      return api;
+    }
+    function cancelar() { tweens = []; if (idTween) { cancelAnimationFrame(idTween); idTween = 0; } return api; }
+
+    /* Curvas en el suelo → el escaneo las levanta → sólido con alambre dorado */
+    function revelar(o) {
+      o = o || {};
+      var r = o.retraso || 0, f = o.ritmo || 1;
+      cancelar();
+      if (quieto()) return final(o);
+      ahora({ corte: 0, dibujo: 0, curvas: 1, bajo: .32, alambre: 0, brillo: 0, plano: 0, suelo: 0 });
+      estado({ suelo: 1 }, { ms: 1100 * f, retraso: r });
+      estado({ dibujo: 1 }, { ms: 1700 * f, retraso: r + 150 * f, curva: 'suave' });
+      estado({ brillo: 1, plano: 1 }, { ms: 500 * f, retraso: r + 1500 * f });
+      estado({ corte: 1 }, { ms: 2900 * f, retraso: r + 1650 * f, curva: 'escaneo' });
+      estado({ alambre: o.alambre == null ? 1 : o.alambre }, { ms: 1300 * f, retraso: r + 3900 * f, curva: 'suave' });
+      estado({ brillo: 0, plano: 0, curvas: o.curvas == null ? 0 : o.curvas }, { ms: 1100 * f, retraso: r + 4300 * f, curva: 'suave', alFin: o.alFin });
+      return api;
+    }
+    function final(o) {
+      o = o || {};
+      cancelar();
+      ahora({ corte: 1, dibujo: 1, curvas: o.curvas == null ? 0 : o.curvas, bajo: .32, alambre: o.alambre == null ? 1 : o.alambre,
+        brillo: 0, plano: 0, suelo: op.suelo === false ? 0 : 1, armar: 1, opacidad: 1 });
+      if (!activo) { if (pendiente) { cancelAnimationFrame(pendiente); pendiente = 0; } dibujar(); }
+      if (o.alFin) o.alFin();
+      return api;
+    }
+
+    /* ── Gestos: arrastrar gira e inclina; rueda o pellizco escala (0,1× a 5×, como la app) ── */
+    var arrastre = null, punteros = {};
+    if (op.interactivo !== false) {
+      canvas.style.touchAction = 'pan-y';
+      canvas.addEventListener('pointerdown', function (e) {
+        punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
+        try { canvas.setPointerCapture(e.pointerId); } catch (er) {}
+        var ids = Object.keys(punteros);
+        if (ids.length === 1) arrastre = { x: e.clientX, y: e.clientY, giro: campos.giro, incl: campos.inclinacion };
+        else if (ids.length === 2 && op.escalar) {
+          var a = punteros[ids[0]], b = punteros[ids[1]];
+          arrastre = { pellizco: Math.hypot(a.x - b.x, a.y - b.y), zoom: campos.zoom };
+        }
+        host.classList.add('visor--arrastrando');
+      });
+      canvas.addEventListener('pointermove', function (e) {
+        if (!punteros[e.pointerId] || !arrastre) return;
+        punteros[e.pointerId] = { x: e.clientX, y: e.clientY };
+        if (arrastre.pellizco) {
+          var ids = Object.keys(punteros); if (ids.length < 2) return;
+          var a = punteros[ids[0]], b = punteros[ids[1]];
+          campos.zoom = clamp(arrastre.zoom * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, arrastre.pellizco), .1, 5);
+        } else {
+          campos.giro = arrastre.giro + (e.clientX - arrastre.x) * .009;
+          campos.inclinacion = clamp(arrastre.incl + (e.clientY - arrastre.y) * .006, .06, 1.35);
+        }
+        dibujarLuego();
+      });
+      var soltar = function (e) {
+        delete punteros[e.pointerId];
+        if (!Object.keys(punteros).length) { arrastre = null; pausaGiro = 1.6; factorGiro = 0; host.classList.remove('visor--arrastrando'); }
+      };
+      canvas.addEventListener('pointerup', soltar);
+      canvas.addEventListener('pointercancel', soltar);
+      if (op.escalar) {
+        canvas.addEventListener('wheel', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          campos.zoom = clamp(campos.zoom * Math.exp(-e.deltaY * .0015), .1, 5);
+          dibujarLuego();
+        }, { passive: false });
+      }
+    }
+
+    function destruir() {
+      detener(); cancelar();
+      if (obs) obs.disconnect();
+      if (gl) { var ext = gl.getExtension('WEBGL_lose_context'); if (ext) ext.loseContext(); }
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+    }
+
+    var api = {
+      medir: medir, dibujar: dibujar, iniciar: iniciar, detener: detener, ahora: ahora, estado: estado, cancelar: cancelar,
+      revelar: revelar, final: final, destruir: destruir,
+      get campos() { return campos; }, get canvas() { return canvas; }, get webgl() { return !!gl; },
+      get velocidad() { return velocidad; }, set velocidad(v) { velocidad = v; },
+      get activo() { return activo; }, geometria: geo, host: host
+    };
+    instancias.push(api);
+    return api;
+  }
+
+  /* instancias: todos los visores creados (útil para revisar desde la consola) */
+  var instancias = [];
+  return { crear: crear, geometria: geometria, curvas: CURVAS, instancias: instancias };
+})();

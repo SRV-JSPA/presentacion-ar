@@ -1,0 +1,120 @@
+/* Ayudas compartidas por las diapositivas: cabecera, fuente, lienzos y animación.
+   Se carga antes que cualquier diapositiva. Guía completa en componentes/LEEME.md. */
+window.Deck = (function () {
+  var D = document, H = D.documentElement;
+  var mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : { matches: false };
+
+  /* true en ?captura, ?qa, ?autoprueba y con movimiento reducido: dibuja el estado final, sin bucles */
+  function quieto() {
+    return H.classList.contains('modo-captura') || H.classList.contains('modo-sintransicion') || !!mq.matches;
+  }
+
+  /* Paso actual de la diapositiva (al regresar o en captura ya vienen todos) */
+  function paso() {
+    var a = window.Presentacion && Presentacion.actual ? Presentacion.actual() : null;
+    return a ? a.paso : 0;
+  }
+
+  /* Azar repetible: la misma semilla dibuja siempre lo mismo */
+  function azar(semilla) {
+    var a = semilla >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  var curvas = {
+    lineal: function (t) { return t; },
+    salida: function (t) { return 1 - Math.pow(1 - t, 3); },
+    suave: function (t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; },
+    rebote: function (t) { var c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); }
+  };
+
+  /* Interpola de 0 a 1 durante ms. Devuelve una función que lo cancela. */
+  function tween(ms, alCuadro, alFin, curva) {
+    var f = curvas[curva || 'salida'] || curvas.salida, inicio = null, id = 0, vivo = true;
+    if (quieto() || ms <= 0) { alCuadro(1); if (alFin) alFin(); return function () {}; }
+    function cuadro(t) {
+      if (!vivo) return;
+      if (inicio === null) inicio = t;
+      var p = Math.min(1, (t - inicio) / ms);
+      alCuadro(f(p));
+      if (p < 1) id = requestAnimationFrame(cuadro); else if (alFin) alFin();
+    }
+    id = requestAnimationFrame(cuadro);
+    return function () { vivo = false; cancelAnimationFrame(id); };
+  }
+
+  /* Bucle de animación: fn(dt en segundos, t en segundos). Se detiene en alSalir. */
+  function bucle(fn) {
+    var id = 0, activo = false, previo = 0, t0 = 0;
+    function cuadro(t) {
+      if (!activo) return;
+      var dt = Math.min(.05, (t - previo) / 1000);
+      previo = t;
+      fn(dt, (t - t0) / 1000);
+      id = requestAnimationFrame(cuadro);
+    }
+    return {
+      iniciar: function () {
+        if (activo) return;
+        activo = true; previo = t0 = performance.now();
+        id = requestAnimationFrame(cuadro);
+      },
+      detener: function () { activo = false; cancelAnimationFrame(id); },
+      get activo() { return activo; }
+    };
+  }
+
+  /* Ajusta un <canvas> al tamaño de su caja, con densidad hasta 2×.
+     Las coordenadas de dibujo quedan en píxeles CSS. alCambiar(ancho, alto) al redimensionar. */
+  function lienzo(canvas, alCambiar) {
+    var ctx = canvas.getContext('2d'), ancho = 0, alto = 0;
+    function medir() {
+      var r = canvas.getBoundingClientRect();
+      /* getBoundingClientRect ve el 3D de la transición; offsetWidth, la caja real */
+      var w = canvas.offsetWidth || r.width, h = canvas.offsetHeight || r.height;
+      if (!w || !h || (w === ancho && h === alto)) return false;
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      ancho = w; alto = h;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (alCambiar) alCambiar(w, h);
+      return true;
+    }
+    var obs = window.ResizeObserver ? new ResizeObserver(medir) : null;
+    if (obs) obs.observe(canvas);
+    medir();
+    return {
+      ctx: ctx, medir: medir,
+      get ancho() { return ancho; }, get alto() { return alto; },
+      soltar: function () { if (obs) obs.disconnect(); }
+    };
+  }
+
+  /* Cabecera estándar: etiqueta de sección y titular. op: {clase, sm, punto:'alert'|'ok', retraso} */
+  function cabeza(etiqueta, titular, op) {
+    op = op || {};
+    var r = op.retraso || 0;
+    return '<header class="cabeza' + (op.clase ? ' ' + op.clase : '') + '">' +
+      (etiqueta ? '<p class="etiqueta etiqueta--punto' + (op.punto ? ' etiqueta--' + op.punto : '') + '" data-anim="subir" style="--retraso:' + r + 'ms">' + etiqueta + '</p>' : '') +
+      '<h2 class="titular' + (op.sm ? ' titular--sm' : '') + '" data-anim="subir" style="--retraso:' + (r + 90) + 'ms">' + titular + '</h2>' +
+      '</header>';
+  }
+
+  /* Pie con la fuente. Va al final del .lienzo. refs: números de notas/referencias, p. ej. [2, 19] */
+  function fuente(texto, refs) {
+    var n = refs && refs.length ? ' <span class="fuente__ref">[' + refs.join(', ') + ']</span>' : '';
+    return '<p class="fuente" data-anim="aparecer" style="--retraso:900ms">' + texto + n + '</p>';
+  }
+
+  /* Crédito corto sobre una foto */
+  function credito(texto) {
+    return '<span class="foto__credito">' + texto + '</span>';
+  }
+
+  return { quieto: quieto, paso: paso, azar: azar, curvas: curvas, tween: tween, bucle: bucle, lienzo: lienzo, cabeza: cabeza, fuente: fuente, credito: credito };
+})();

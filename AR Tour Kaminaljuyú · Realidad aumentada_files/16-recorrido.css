@@ -1,0 +1,115 @@
+/* 16 · Recorrido — titular arriba, el sendero en herradura al centro y la fila AppState debajo.
+   Colores del sendero = el estado de la app en ese tramo: barro (idle), oro (inTour), olivo (completed).
+   La flecha del visitante y los botones de las compuertas son de la app (terracota y canela). */
+.diapo[data-id="recorrido"] .rec{justify-content:center;gap:0}
+.diapo[data-id="recorrido"] .cabeza .titular{max-width:none}
+
+.diapo[data-id="recorrido"] .rec__caja{position:relative;align-self:center;
+  width:min(100%,calc((var(--alto-util) - var(--u)*18.5) * 2.6087));margin:var(--e-4) 0 var(--e-3)}
+.diapo[data-id="recorrido"] .rec__escena{position:relative;width:100%;aspect-ratio:var(--ar)}
+.diapo[data-id="recorrido"] .rec__escena--v{display:none}
+.diapo[data-id="recorrido"] .rec__monte{opacity:.7;transform-box:fill-box;transform-origin:center}
+.diapo[data-id="recorrido"] .rec__curva{fill:none;stroke:var(--barro-claro);stroke-width:1.1}
+.diapo[data-id="recorrido"] .rec__curva--maestra{stroke-width:2}
+.diapo[data-id="recorrido"].anim-activa .rec__monte{animation:rec-monte 2600ms var(--ease-expo) 300ms both}
+@keyframes rec-monte{from{opacity:0;scale:.9}to{opacity:.7;scale:1}}
+.diapo[data-id="recorrido"] .rec__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+
+/* El sendero: trazado punteado en barro y, encima, lo ya recorrido con el color de su estado */
+.diapo[data-id="recorrido"] .rec__base{fill:none;stroke:var(--barro-claro);stroke-width:3;stroke-linecap:round;stroke-dasharray:.5 9;opacity:.9}
+.diapo[data-id="recorrido"] .rec__tramo{fill:none;stroke-width:5.5;stroke-linecap:round}
+.diapo[data-id="recorrido"] .rec__tramo--idle{stroke:var(--barro)}
+.diapo[data-id="recorrido"] .rec__tramo--inTour{stroke:var(--oro-trazo);filter:drop-shadow(0 0 3px rgba(185,132,36,.35))}
+.diapo[data-id="recorrido"] .rec__tramo--completed{stroke:var(--olivo-hondo)}
+.diapo[data-id="recorrido"] .rec__vuelta{fill:none;stroke:var(--texto-mute);stroke-width:1.6;stroke-dasharray:6 7;opacity:.55}
+.diapo[data-id="recorrido"] .rec__punta{fill:none;stroke:var(--texto-mute);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.diapo[data-id="recorrido"].rec--fin .rec__vuelta{opacity:.9}
+
+/* Etapas: nodo de levantamiento que se enciende al paso de la flecha */
+.diapo[data-id="recorrido"] .rec__nodo-aro{fill:#FBF4E4;stroke:var(--barro-claro);stroke-width:2.2;transition:stroke .45s,fill .45s}
+.diapo[data-id="recorrido"] .rec__nodo-centro{fill:var(--barro-claro);transform-box:fill-box;transform-origin:center;scale:.6;transition:fill .45s,scale .5s var(--ease-resorte)}
+.diapo[data-id="recorrido"] .rec__nodo-onda{fill:none;stroke-width:2;opacity:0;transform-box:fill-box;transform-origin:center}
+.diapo[data-id="recorrido"] .rec__nodo{--c:var(--oro-trazo)}
+.diapo[data-id="recorrido"] .rec__nodo[data-k="0"],.diapo[data-id="recorrido"] .rec__nodo[data-k="1"]{--c:var(--barro)}
+.diapo[data-id="recorrido"] .rec__nodo[data-k="7"]{--c:var(--olivo-hondo)}
+.diapo[data-id="recorrido"] .rec__nodo.rec--on .rec__nodo-aro{stroke:var(--c)}
+.diapo[data-id="recorrido"] .rec__nodo.rec--on .rec__nodo-centro{fill:var(--c);scale:1}
+.diapo[data-id="recorrido"] .rec__nodo-onda{stroke:var(--c)}
+.diapo[data-id="recorrido"].anim-activa .rec__nodo.rec--on .rec__nodo-onda{animation:rec-onda 1000ms var(--ease-expo) both}
+@keyframes rec-onda{from{opacity:.75;scale:1}to{opacity:0;scale:2.3}}
+
+/* La flecha del visitante (la app) */
+.diapo[data-id="recorrido"] .rec__flecha{fill:var(--app);stroke:#FBF4E4;stroke-width:2.6;stroke-linejoin:round}
+.diapo[data-id="recorrido"] .rec__pulso{fill:var(--app);opacity:.13;transform-box:fill-box;transform-origin:center}
+.diapo[data-id="recorrido"].anim-activa .rec__pulso{animation:rec-pulso 1600ms ease-in-out infinite}
+@keyframes rec-pulso{0%,100%{scale:.75;opacity:.18}50%{scale:1.15;opacity:.06}}
+
+/* Rótulos de las etapas */
+.diapo[data-id="recorrido"] .rec__et{position:absolute;display:flex;flex-direction:column;align-items:center;gap:.2em;white-space:nowrap;
+  font-size:var(--t-texto);line-height:1.15;color:var(--texto-mute);transition:color .45s}
+.diapo[data-id="recorrido"] .rec__et b{font-weight:600;letter-spacing:-.01em;transition:color .45s}
+.diapo[data-id="recorrido"] .rec__et i{font-style:normal;font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.04em;
+  padding:.1em .45em;border-radius:3px;border:1px solid currentColor}
+.diapo[data-id="recorrido"] .rec__et--arriba{translate:-50% calc(-100% - var(--u)*1.75);flex-direction:column-reverse}
+.diapo[data-id="recorrido"] .rec__et--abajo{translate:-50% calc(var(--u)*1.75)}
+.diapo[data-id="recorrido"] .rec__et.rec--on{color:var(--texto)}
+.diapo[data-id="recorrido"] .rec__et.rec--on b{font-weight:700}
+.diapo[data-id="recorrido"] .rec__et--poi{flex-direction:row;gap:.3em}
+.diapo[data-id="recorrido"] .rec__et--poi b{font-family:var(--f-mono);font-weight:500;letter-spacing:.02em}
+.diapo[data-id="recorrido"] .rec__et--poi.rec--on b{font-weight:600}
+.diapo[data-id="recorrido"] .rec__et--poi.rec__et--arriba{flex-direction:row}
+.diapo[data-id="recorrido"] .rec__pin{font-size:1.05em;color:var(--app);opacity:.45;transition:opacity .45s}
+.diapo[data-id="recorrido"] .rec__et.rec--on .rec__pin{opacity:1}
+.diapo[data-id="recorrido"] .rec__et[data-k="1"].rec--on i{color:var(--barro-hondo)}
+
+/* Compuertas y botón ✓: los botones canela de la capa RA; al 40 % hasta que el visitante los toca */
+.diapo[data-id="recorrido"] .rec__puerta,.diapo[data-id="recorrido"] .rec__boton{position:absolute;translate:-50% -50%;display:grid;place-items:center;
+  border-radius:50%;background:#E8C294;border:max(2px,calc(var(--u)*.16)) solid rgba(191,97,26,.6);color:#BF611A;
+  box-shadow:0 0 0 max(3px,calc(var(--u)*.3)) #F5EBD6,0 3px 8px rgba(92,67,48,.18);opacity:.4;
+  transition:opacity .4s,scale .6s var(--ease-resorte)}
+.diapo[data-id="recorrido"] .rec__puerta{width:max(28px,calc(var(--u)*2.7));height:max(28px,calc(var(--u)*2.7));font-size:max(13px,calc(var(--u)*1.2))}
+.diapo[data-id="recorrido"] .rec__boton{width:max(34px,calc(var(--u)*3.5));height:max(34px,calc(var(--u)*3.5));font-size:max(16px,calc(var(--u)*1.6))}
+.diapo[data-id="recorrido"] .rec__puerta.rec--on,.diapo[data-id="recorrido"] .rec__boton.rec--on{opacity:1}
+.diapo[data-id="recorrido"].anim-activa .rec__puerta.rec--on,.diapo[data-id="recorrido"].anim-activa .rec__boton.rec--on{animation:rec-toque 700ms var(--ease-resorte)}
+@keyframes rec-toque{0%{scale:1}35%{scale:.82}100%{scale:1}}
+.diapo[data-id="recorrido"] .rec__puerta em{position:absolute;top:50%;left:calc(100% + var(--u)*.9);translate:0 -50%;font-style:normal;
+  font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.06em;color:#BF611A;white-space:nowrap}
+
+/* AppState, sincronizado con el color del sendero */
+.diapo[data-id="recorrido"] .rec__estado{align-self:center;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:var(--e-2);
+  margin:var(--e-3) 0 0;font-family:var(--f-mono);font-size:var(--t-chico);font-weight:500;color:var(--texto-mute)}
+.diapo[data-id="recorrido"] .rec__clave{color:var(--texto-2);letter-spacing:.02em}
+.diapo[data-id="recorrido"] .rec__flechita{color:var(--texto-mute)}
+.diapo[data-id="recorrido"] .rec__st{--c:var(--barro);position:relative;padding:.38em .95em;border-radius:99px;border:1.5px solid var(--linea);
+  color:var(--texto-mute);background:transparent;transition:color .5s,background-color .5s,border-color .5s,box-shadow .5s}
+.diapo[data-id="recorrido"] .rec__st[data-st="inTour"]{--c:var(--oro-trazo)}
+.diapo[data-id="recorrido"] .rec__st[data-st="completed"]{--c:var(--olivo-hondo)}
+.diapo[data-id="recorrido"] .rec__st--paso{color:var(--c);border-color:var(--c)}
+.diapo[data-id="recorrido"] .rec__st--actual{color:#FBF4E4;background:var(--c);border-color:var(--c);
+  box-shadow:0 0 0 .35em color-mix(in srgb,var(--c) 18%,transparent)}
+
+.modo-captura .diapo[data-id="recorrido"] .rec__monte,.modo-captura .diapo[data-id="recorrido"] .rec__nodo-onda,.modo-captura .diapo[data-id="recorrido"] .rec__pulso,
+.modo-captura .diapo[data-id="recorrido"] .rec__puerta,.modo-captura .diapo[data-id="recorrido"] .rec__boton{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="recorrido"] .rec__monte,.diapo[data-id="recorrido"] .rec__nodo-onda,.diapo[data-id="recorrido"] .rec__pulso,
+  .diapo[data-id="recorrido"] .rec__puerta,.diapo[data-id="recorrido"] .rec__boton{animation:none!important}
+}
+
+/* Vertical */
+@media (orientation:portrait){
+  .diapo[data-id="recorrido"] .rec{justify-content:flex-start}
+  .diapo[data-id="recorrido"] .rec__caja{width:100%;margin:var(--e-7) 0 var(--e-5)}
+  .diapo[data-id="recorrido"] .rec__estado{margin-top:var(--e-4)}
+}
+/* Teléfono: una sola columna, rótulos a la derecha */
+@media (orientation:portrait) and (max-width:719px){
+  .diapo[data-id="recorrido"] .rec__escena--h{display:none}
+  .diapo[data-id="recorrido"] .rec__escena--v{display:block}
+  .diapo[data-id="recorrido"] .rec__caja{width:100%;max-width:420px;margin:var(--e-6) 0 var(--e-4)}
+  .diapo[data-id="recorrido"] .rec__et--der{translate:calc(var(--u)*0 + 34px) -50%;flex-direction:row;align-items:baseline;gap:.5em}
+  .diapo[data-id="recorrido"] .rec__et--poi{align-items:center}
+  .diapo[data-id="recorrido"] .rec__estado{justify-content:flex-start;align-self:stretch;gap:8px}
+}
+@media (orientation:portrait) and (min-width:720px){
+  .diapo[data-id="recorrido"] .rec{justify-content:center}
+}

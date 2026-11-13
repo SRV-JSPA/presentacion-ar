@@ -1,0 +1,201 @@
+/* 09 · Colocación — ink. El plano cenital de la escena de ARKit (worldAlignment .gravityAndHeading:
+   el norte es −Z, ARViewController.swift:222-225). La cámara en el origen abre su cono de visión; una
+   aguja de brújula gira desde el norte hasta el rumbo θ mientras se estira hasta la distancia d; sus
+   componentes se proyectan sobre los ejes: x = d · sen θ, z = −d · cos θ (ARSceneManager.swift:335-363).
+   En el punto aparece el montículo C-II-6 (curvas reales de Monticulo7.obj) como fantasma dorado y se
+   solidifica. Después llegan lecturas GPS: el punto da pequeños saltos y el modelo se reacomoda, porque
+   no hay ancla: la posición se recalcula con cada lectura. d y θ son ilustrativos (no se rotulan cifras). */
+(function () {
+  var O = [-92, 118];                 /* la cámara, en unidades del viewBox (-200…200) */
+  var D0 = 262, TH0 = 39 * Math.PI / 180, CONO = 31 * Math.PI / 180, R_CONO = 300, R_ARCO = 62;
+  var el0 = null, bucle = null, vista = null;
+  var vivo = { d: D0, th: TH0, meta: { d: D0, th: TH0 }, lectura: 1, prox: 0, rastro: [] }, azar = null;
+
+  function pol(r, a) { return [O[0] + r * Math.sin(a), O[1] - r * Math.cos(a)]; }
+  function f(n) { return n.toFixed(2); }
+  function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+  function tramo(t, a, b) { return clamp01((t - a) / (b - a)); }
+  function suave(x) { return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+  function salida(x) { return 1 - Math.pow(1 - x, 3); }
+
+  /* Las curvas de nivel reales del montículo, vistas desde arriba (x, z en −1…1) */
+  function fantasma() {
+    var esc = 36, h = '';
+    Curvas.deModelo(Modelos.m7, 7).forEach(function (nv, i) {
+      var d = nv.lineas.map(function (l) { return Curvas.trazo(l.map(function (p) { return [p[0] * esc, p[1] * esc]; })); }).join('');
+      h += '<path class="col__fn' + (i === 0 ? ' col__fn--base' : '') + '" d="' + d + '"/>';
+    });
+    return h;
+  }
+
+  function svg() {
+    var g = '', i;
+    for (i = -200; i <= 200; i += 40) g += '<line x1="' + i + '" y1="-200" x2="' + i + '" y2="200"/><line x1="-200" y1="' + i + '" x2="200" y2="' + i + '"/>';
+    return '<svg class="col__svg" viewBox="-200 -200 400 400" aria-hidden="true">' +
+      '<defs><marker id="col-punta" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">' +
+        '<path d="M0 0 10 5 0 10z" class="col__punta"/></marker>' +
+        '<marker id="col-punta-oro" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="4" markerHeight="4" orient="auto"><path d="M0 0 10 5 0 10z" fill="#E6BA62"/></marker>' +
+        '<radialGradient id="col-cono-g" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(' + O[0] + ' ' + O[1] + ') scale(' + R_CONO + ')">' +
+        '<stop offset="0" stop-color="#E6BA62" stop-opacity=".24"/><stop offset="1" stop-color="#E6BA62" stop-opacity="0"/></radialGradient></defs>' +
+      '<g class="col__reticula" data-anim="aparecer">' + g + '</g>' +
+      '<g class="col__ejes" data-anim="dibujar" style="--dur-dibujar:1100ms">' +
+        '<line x1="-196" y1="' + O[1] + '" x2="192" y2="' + O[1] + '" marker-end="url(#col-punta)"/>' +
+        '<line x1="' + O[0] + '" y1="196" x2="' + O[0] + '" y2="-192" marker-end="url(#col-punta)"/></g>' +
+      '<clipPath id="col-marco"><rect x="-200" y="-200" width="400" height="400"/></clipPath>' +
+      '<path class="col__cono" clip-path="url(#col-marco)" data-decorativo/>' +
+      '<path class="col__arco"/>' +
+      '<g class="col__rastro"></g>' +
+      '<line class="col__proy col__proy--x"/><line class="col__proy col__proy--z"/>' +
+      '<line class="col__comp col__comp--x"/><line class="col__comp col__comp--z"/>' +
+      '<line class="col__vec" marker-end="url(#col-punta-oro)"/>' +
+      '<g class="col__modelo"><circle class="col__suelo" r="44"/>' + fantasma() + '</g>' +
+      '<g class="col__poi"><circle class="col__poi-onda" r="6"/><circle class="col__poi-punto" r="3.6"/></g>' +
+      '<g class="col__camara" transform="translate(' + O[0] + ' ' + O[1] + ')"><circle class="col__cam-onda" r="10"/>' +
+        '<rect x="-6" y="-10" width="12" height="20" rx="3"/><circle cx="0" cy="-6.4" r="1.3"/></g>' +
+      '</svg>';
+  }
+
+  /* p: cono, giro, largo, proy, rotulos, fantasma, solido (0…1) */
+  function pintar(p) {
+    if (!el0) return;
+    var s = el0.querySelector('.col__svg');
+    var a = CONO * p.cono;
+    var c1 = pol(R_CONO, -a), c2 = pol(R_CONO, a);
+    s.querySelector('.col__cono').setAttribute('d', p.cono > .001 ? 'M' + O[0] + ' ' + O[1] + 'L' + f(c1[0]) + ' ' + f(c1[1]) + 'A' + R_CONO + ' ' + R_CONO + ' 0 0 1 ' + f(c2[0]) + ' ' + f(c2[1]) + 'Z' : '');
+    var th = vivo.th * p.giro, d = vivo.d * p.largo, P = pol(d, th);
+    var a0 = pol(R_ARCO, 0), a1 = pol(R_ARCO, th);
+    s.querySelector('.col__arco').setAttribute('d', th > .002 ? 'M' + f(a0[0]) + ' ' + f(a0[1]) + 'A' + R_ARCO + ' ' + R_ARCO + ' 0 0 1 ' + f(a1[0]) + ' ' + f(a1[1]) : '');
+    var v = s.querySelector('.col__vec');
+    v.setAttribute('x1', O[0]); v.setAttribute('y1', O[1]); v.setAttribute('x2', f(P[0])); v.setAttribute('y2', f(P[1]));
+    v.style.opacity = p.largo > .02 ? 1 : 0;
+    /* proyecciones: desde el punto hacia cada eje, y la componente que crece sobre el eje */
+    var pr = p.proy, px = s.querySelector('.col__proy--x'), pz = s.querySelector('.col__proy--z');
+    px.setAttribute('x1', f(P[0])); px.setAttribute('y1', f(P[1])); px.setAttribute('x2', f(P[0])); px.setAttribute('y2', f(P[1] + (O[1] - P[1]) * pr));
+    pz.setAttribute('x1', f(P[0])); pz.setAttribute('y1', f(P[1])); pz.setAttribute('x2', f(P[0] + (O[0] - P[0]) * pr)); pz.setAttribute('y2', f(P[1]));
+    var cx = s.querySelector('.col__comp--x'), cz = s.querySelector('.col__comp--z');
+    cx.setAttribute('x1', O[0]); cx.setAttribute('y1', O[1]); cx.setAttribute('x2', f(O[0] + (P[0] - O[0]) * pr)); cx.setAttribute('y2', O[1]);
+    cz.setAttribute('x1', O[0]); cz.setAttribute('y1', O[1]); cz.setAttribute('x2', O[0]); cz.setAttribute('y2', f(O[1] + (P[1] - O[1]) * pr));
+    [px, pz, cx, cz].forEach(function (e) { e.style.opacity = pr > .01 ? 1 : 0; });
+    /* el punto y el modelo */
+    s.querySelector('.col__poi').setAttribute('transform', 'translate(' + f(P[0]) + ' ' + f(P[1]) + ')');
+    s.querySelector('.col__poi').style.opacity = p.largo > .98 ? 1 : 0;
+    var m = s.querySelector('.col__modelo');
+    var mx = vivo.mod ? vivo.mod[0] : P[0], my = vivo.mod ? vivo.mod[1] : P[1];
+    m.setAttribute('transform', 'translate(' + f(mx) + ' ' + f(my) + ') scale(' + f(.82 + .18 * salida(p.fantasma)) + ')');
+    m.style.opacity = (p.fantasma * (.55 + .45 * p.solido)).toFixed(3);
+    m.style.setProperty('--solido', p.solido.toFixed(3));
+    el0.classList.toggle('col--solido', p.solido > .5);
+    /* rótulos (HTML) */
+    function poner(sel, x, y, op) {
+      var e = el0.querySelector(sel); if (!e) return;
+      e.style.left = ((x + 200) / 4).toFixed(2) + '%'; e.style.top = ((y + 200) / 4).toFixed(2) + '%';
+      if (op != null) e.style.opacity = op.toFixed(3);
+    }
+    var mid = pol(d * .5, th), nrm = [Math.cos(th), Math.sin(th)];
+    poner('.col__r-d', mid[0] - nrm[0] * 14, mid[1] - nrm[1] * 14, p.largo > .9 ? p.rotulos : 0);
+    var at = pol(R_ARCO + 16, th / 2);
+    poner('.col__r-th', at[0], at[1], th > .05 ? Math.min(1, p.giro * 2) : 0);
+    poner('.col__r-x', O[0] + (P[0] - O[0]) * .5 * pr + 0, O[1] + 16, p.rotulos);
+    poner('.col__r-z', O[0] - 15, O[1] + (P[1] - O[1]) * .5 * pr, p.rotulos);
+    poner('.col__r-modelo', mx + 30, my - 44, p.solido);
+    poner('.col__r-cam', O[0] - 12, O[1] + 14);
+  }
+
+  /* Línea de tiempo de entrada (s) → estado; después, las lecturas GPS */
+  function estadoEn(t) {
+    return {
+      cono: suave(tramo(t, .5, 1.5)),
+      giro: suave(tramo(t, 1.3, 2.7)),
+      largo: salida(tramo(t, 1.3, 2.7)),
+      proy: suave(tramo(t, 2.8, 3.7)),
+      rotulos: tramo(t, 3.4, 4),
+      fantasma: tramo(t, 3.9, 4.6),
+      solido: suave(tramo(t, 4.9, 5.8))
+    };
+  }
+  var FIN = estadoEn(99);
+
+  function nuevaLectura() {
+    vivo.rastro.unshift([vivo.d, vivo.th]);
+    vivo.rastro = vivo.rastro.slice(0, 3);
+    vivo.meta = { d: D0 * (1 + (azar() - .5) * .11), th: TH0 + (azar() - .5) * 7 * Math.PI / 180 };
+    vivo.lectura++;
+    var n = el0.querySelector('.col__n'); if (n) n.textContent = (vivo.lectura < 10 ? '0' : '') + vivo.lectura;
+    el0.classList.remove('col--lectura'); void el0.offsetWidth; el0.classList.add('col--lectura');
+    var r = el0.querySelector('.col__rastro');
+    r.innerHTML = vivo.rastro.map(function (q, i) {
+      var P = pol(q[0], q[1]);
+      return '<circle cx="' + f(P[0]) + '" cy="' + f(P[1]) + '" r="2.6" style="opacity:' + (.5 - i * .15).toFixed(2) + '"/>';
+    }).join('');
+  }
+
+  function reiniciar() {
+    vivo.d = D0; vivo.th = TH0; vivo.meta = { d: D0, th: TH0 }; vivo.lectura = 1; vivo.prox = 0; vivo.rastro = []; vivo.mod = null;
+    azar = Deck.azar(9);
+    var r = el0.querySelector('.col__rastro'); if (r) r.innerHTML = '';
+    var n = el0.querySelector('.col__n'); if (n) n.textContent = '01';
+    el0.classList.remove('col--lectura');
+  }
+
+  Presentacion.diapositiva({
+    id: 'colocacion',
+    titulo: 'Del GPS a la escena',
+    seccion: 'Realidad aumentada',
+    tema: 'ink',
+    transicion: 'giro',
+    resumen: 'Distancia y rumbo se vuelven x y z',
+    html: `
+      <div class="lienzo col">
+        <div class="col__texto">
+          ${Deck.cabeza('Colocación', 'Del GPS a la escena: distancia y rumbo.')}
+          <p class="formula col__formula" data-anim="subir" style="--retraso:300ms">${Motivos.esquinas()}<b>x</b> = d · sen θ<br><b>z</b> = −d · cos θ</p>
+          <ul class="lista col__lista" data-anim-grupo="subir" data-intervalo="110" style="--retraso:460ms">
+            <li class="col__li-recalc"><span>El modelo no usa anclas: se recalcula con cada lectura GPS</span></li>
+            <li><span>Mundo alineado con gravedad y brújula</span></li>
+            <li><span>El modelo colocado se revela a <span class="k">10 m</span> efectivos</span></li>
+          </ul>
+        </div>
+
+        <div class="col__escena">
+          <div class="col__plano" data-anim="escala" style="--retraso:60ms">
+            ${svg()}
+            ${Motivos.esquinas()}
+            <span class="col__eje col__eje--n" aria-hidden="true"><b>−Z</b> · norte</span>
+            <span class="col__eje col__eje--e" aria-hidden="true"><b>+X</b> · este</span>
+            <span class="col__r col__r-d" aria-hidden="true">d</span>
+            <span class="col__r col__r-th" aria-hidden="true">θ</span>
+            <span class="col__r col__r-x" aria-hidden="true">x = d · sen θ</span>
+            <span class="col__r col__r-z" aria-hidden="true">z = −d · cos θ</span>
+            <span class="col__r col__r-cam" aria-hidden="true">cámara</span>
+            <span class="col__r col__r-modelo">${Motivos.rotulo('C-II-6', 'Montículo', 'rotulo--oro')}</span>
+            <div class="col__hud hud" aria-hidden="true">
+              <div><b>Lectura GPS</b> · <i class="col__n">01</i></div>
+              <div>.gravityAndHeading</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      reiniciar();
+      if (bucle) bucle.detener();
+      if (Deck.quieto()) { pintar(FIN); return; }
+      pintar(estadoEn(0));
+      var proxima = 6.6;
+      bucle = Deck.bucle(function (dt, t) {
+        if (t >= proxima) { nuevaLectura(); proxima = t + 1.7; }
+        /* cada lectura salta; el punto llega rápido y el modelo se reacomoda detrás */
+        var k = 1 - Math.exp(-dt * 9);
+        vivo.d += (vivo.meta.d - vivo.d) * k; vivo.th += (vivo.meta.th - vivo.th) * k;
+        var P = pol(vivo.d, vivo.th);
+        if (!vivo.mod) vivo.mod = P.slice();
+        var km = 1 - Math.exp(-dt * 3.2);
+        vivo.mod[0] += (P[0] - vivo.mod[0]) * km; vivo.mod[1] += (P[1] - vivo.mod[1]) * km;
+        pintar(estadoEn(t));
+      });
+      bucle.iniciar();
+    },
+    alSalir: function () { if (bucle) bucle.detener(); }
+  });
+})();

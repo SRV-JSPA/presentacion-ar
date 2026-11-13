@@ -1,0 +1,70 @@
+/* 01 · Portada — el texto a la izquierda; la Acrópolis llena la derecha, enmarcada por la retícula
+   de cámara. En vertical, el modelo arriba (recortado por su marco) y el texto debajo. */
+.diapo[data-id="portada"] .portada{justify-content:center}
+
+/* Marco decorativo que llega a los bordes de la pantalla (no cuenta para desbordes) */
+.diapo[data-id="portada"] .portada__marco{position:absolute;z-index:1;overflow:hidden;
+  inset:calc(var(--margen-arriba)*-1) calc(var(--margen-x)*-1) calc(var(--reserva-abajo)*-1)}
+.diapo[data-id="portada"] .portada__visor{position:absolute;top:0;bottom:calc(var(--reserva-abajo)*.55);left:42%;right:-1%}
+/* Un halo cálido detrás del modelo, como la luz de la escena */
+.diapo[data-id="portada"] .portada__marco::before{content:'';position:absolute;left:44%;right:-6%;top:6%;bottom:4%;
+  background:radial-gradient(closest-side,rgba(230,186,98,.09),transparent 72%);pointer-events:none}
+
+/* La retícula de cámara alrededor del modelo, con las lecturas en sus esquinas */
+.diapo[data-id="portada"] .portada__mira{position:absolute;left:48%;right:calc(var(--margen-x)*.75);
+  top:calc(var(--margen-arriba) + var(--u)*1.2);bottom:calc(var(--reserva-abajo) + var(--u)*.4);pointer-events:none;
+  --oro-tema:var(--oro)}
+.diapo[data-id="portada"] .portada__mira .esquinas{--esq-tam:calc(var(--u)*2.6)}
+.diapo[data-id="portada"] .portada__hud{position:absolute}
+.diapo[data-id="portada"] .portada__hud--coord{left:calc(var(--u)*3.4);top:calc(var(--u)*.2)}
+.diapo[data-id="portada"] .portada__hud--rotulo{right:calc(var(--u)*3.4);top:calc(var(--u)*-.3)}
+.diapo[data-id="portada"] .portada__hud--obj{right:calc(var(--u)*3.4);bottom:calc(var(--u)*.2)}
+.diapo[data-id="portada"] .portada__hud .hud{color:var(--texto-2)}
+
+/* Texto */
+.diapo[data-id="portada"] .portada__texto{position:relative;z-index:2;display:flex;flex-direction:column;align-items:flex-start;
+  gap:var(--e-3);max-width:calc(var(--u)*45);pointer-events:none}
+.diapo[data-id="portada"] .portada__texto>*{pointer-events:auto}
+.diapo[data-id="portada"] .portada__titulo{margin:var(--e-1) 0 0;display:flex;flex-direction:column;align-items:flex-start;font-family:var(--f-titular);font-weight:700}
+.diapo[data-id="portada"] .portada__ar{font-size:calc(var(--u)*2.7);line-height:1.1;letter-spacing:-.02em;color:var(--crema-app)}
+.diapo[data-id="portada"] .portada__nombre{font-size:calc(var(--u)*6.9);line-height:1.02;letter-spacing:-.045em;color:var(--terracota);
+  margin-top:calc(var(--u)*.2)}
+/* La barra dorada del splash: se llena al ritmo de la línea de escaneo del modelo */
+.diapo[data-id="portada"] .portada__barra{position:relative;display:block;width:calc(var(--u)*9.6);height:max(4px,calc(var(--u)*.34));
+  margin-top:calc(var(--u)*1.1);border-radius:99px;background:rgba(230,186,98,.16);overflow:hidden}
+.diapo[data-id="portada"] .portada__barra i{position:absolute;inset:0;background:var(--oro);transform-origin:0 50%;border-radius:inherit;
+  box-shadow:0 0 12px rgba(230,186,98,.55)}
+.diapo[data-id="portada"].anim-activa .portada__barra i{animation:portada-barra 2900ms cubic-bezier(.45,0,.55,1) 2150ms both}
+@keyframes portada-barra{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.diapo[data-id="portada"] .lead{max-width:33ch;color:var(--texto-2)}
+.diapo[data-id="portada"] .portada__pie{margin:var(--e-2) 0 0;padding-top:var(--e-3);border-top:1px solid var(--linea);
+  font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.1em;text-transform:uppercase;color:var(--texto-mute);line-height:1.5}
+
+.modo-captura .diapo[data-id="portada"] .portada__barra i{animation:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="portada"].anim-activa .portada__barra i{animation:none}
+}
+
+/* Tableta y teléfono: el modelo arriba, recortado; el texto debajo */
+@media (orientation:portrait){
+  .diapo[data-id="portada"] .portada{justify-content:flex-start;padding-top:calc(var(--u)*47)}
+  .diapo[data-id="portada"] .portada__marco{bottom:auto;height:calc(var(--u)*44 + var(--margen-arriba))}
+  .diapo[data-id="portada"] .portada__marco::before{left:-10%;right:-10%;top:0;bottom:0}
+  .diapo[data-id="portada"] .portada__visor{left:-6%;right:-6%;top:0;bottom:0}
+  .diapo[data-id="portada"] .portada__mira{left:var(--margen-x);right:var(--margen-x);top:calc(var(--margen-arriba) + var(--u)*1);bottom:calc(var(--u)*1)}
+  .diapo[data-id="portada"] .portada__mira .esquinas{--esq-tam:calc(var(--u)*4)}
+  .diapo[data-id="portada"] .portada__hud--coord{left:calc(var(--u)*5.5);top:calc(var(--u)*.8)}
+  .diapo[data-id="portada"] .portada__hud--rotulo{right:calc(var(--u)*5.5);top:auto;bottom:calc(var(--u)*.6)}
+  .diapo[data-id="portada"] .portada__hud--obj{display:none}
+  .diapo[data-id="portada"] .portada__texto{max-width:none;gap:var(--e-3)}
+  .diapo[data-id="portada"] .portada__ar{font-size:calc(var(--u)*3.3)}
+  .diapo[data-id="portada"] .portada__nombre{font-size:min(calc(var(--u)*6.4),14.5vw)}
+  .diapo[data-id="portada"] .portada__barra{width:calc(var(--u)*9.5);height:max(4px,calc(var(--u)*.45))}
+  .diapo[data-id="portada"] .lead{max-width:none}
+}
+@media (orientation:portrait) and (min-width:720px){
+  .diapo[data-id="portada"] .portada{padding-top:calc(var(--u)*52)}
+  .diapo[data-id="portada"] .portada__marco{height:calc(var(--u)*48 + var(--margen-arriba))}
+  .diapo[data-id="portada"] .portada__nombre{font-size:calc(var(--u)*7.6)}
+  .diapo[data-id="portada"] .portada__ar{font-size:calc(var(--u)*3)}
+}

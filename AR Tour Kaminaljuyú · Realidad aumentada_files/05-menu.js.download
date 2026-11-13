@@ -1,0 +1,120 @@
+/* 05 · Menú — ink. El menú principal real (KitApp.menu: MainMenuView.swift) en el teléfono. Cada pocos
+   segundos un toque en el selector ES | EN y los textos voltean en X, uno tras otro de arriba abajo, al
+   otro idioma (LocalizedStrings.swift: ES 35-41, EN 111-117; pantallas-arquitectura.md § A.3). En
+   inglés aparece la tercera línea («Archaeological Park»), que en español va vacía y no se dibuja.
+   En Deck.quieto() queda en español, sin alternar. */
+(function () {
+  var el0 = null, idioma = 'es', relojes = [], anims = [];
+  var ESPERA_INICIAL = 2200, CADA = 4600;
+
+  function limpiar() {
+    relojes.forEach(clearTimeout); relojes = [];
+    anims.forEach(function (a) { try { a.cancel(); } catch (e) {} }); anims = [];
+    if (el0) el0.querySelectorAll('.menu__toque').forEach(function (t) { t.remove(); });
+  }
+
+  function hud(id) {
+    var h = el0 && el0.querySelector('.menu__idioma');
+    if (h) h.textContent = id === 'en' ? 'EN · English' : 'ES · Español';
+  }
+
+  /* Cambio inmediato (captura, regreso, salida) */
+  function poner(id) {
+    idioma = id;
+    if (!el0) return;
+    KitApp.idiomaMenu(el0.querySelector('.app-menu'), id);
+    el0.querySelector('.app-menu').setAttribute('data-idioma', id);
+    el0.classList.toggle('menu--en', id === 'en');
+    hud(id);
+  }
+
+  /* El volteo: toque en el selector y cada texto gira en X al otro idioma, escalonado */
+  function voltear(id) {
+    if (!el0) return;
+    var raiz = el0.querySelector('.app-menu'), t = KitApp.TEXTOS[id];
+    var b = raiz.querySelector('.app-idioma b[data-idioma="' + id + '"]');
+    if (b) {
+      var toque = document.createElement('span');
+      toque.className = 'menu__toque'; toque.setAttribute('aria-hidden', 'true');
+      b.appendChild(toque);
+      relojes.push(setTimeout(function () { toque.remove(); }, 1100));
+    }
+    relojes.push(setTimeout(function () {
+      raiz.querySelectorAll('.app-idioma b').forEach(function (x) { x.classList.toggle('activo', x.getAttribute('data-idioma') === id); });
+      raiz.setAttribute('data-idioma', id);
+      el0.classList.toggle('menu--en', id === 'en');
+      hud(id);
+      var lista = Array.prototype.slice.call(raiz.querySelectorAll('[data-texto]'));
+      lista.forEach(function (e, i) {
+        var k = e.getAttribute('data-texto'), nuevo = t[k] || '';
+        var aparece = e.hidden && nuevo, desaparece = !e.hidden && !nuevo;
+        var retraso = i * 85;
+        function entra() {
+          e.innerHTML = nuevo;
+          e.hidden = !nuevo;
+          if (!nuevo) return;
+          anims.push(e.animate([
+            { transform: 'perspective(520px) rotateX(92deg)', opacity: .2 },
+            { transform: 'perspective(520px) rotateX(-12deg)', opacity: 1, offset: .72 },
+            { transform: 'perspective(520px) rotateX(0deg)', opacity: 1 }
+          ], { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' }));
+        }
+        if (aparece) { relojes.push(setTimeout(entra, retraso + 230)); return; }
+        var sale = e.animate([
+          { transform: 'perspective(520px) rotateX(0deg)', opacity: 1 },
+          { transform: 'perspective(520px) rotateX(-92deg)', opacity: .2 }
+        ], { duration: 230, delay: retraso, easing: 'cubic-bezier(.55,0,.8,.2)', fill: 'forwards' });
+        anims.push(sale);
+        sale.onfinish = function () { entra(); try { sale.cancel(); } catch (x) {} if (desaparece) e.hidden = true; };
+      });
+      idioma = id;
+    }, 260));
+  }
+
+  function ciclo() {
+    relojes.push(setTimeout(function paso() {
+      voltear(idioma === 'es' ? 'en' : 'es');
+      relojes.push(setTimeout(paso, CADA));
+    }, ESPERA_INICIAL));
+  }
+
+  Presentacion.diapositiva({
+    id: 'menu',
+    titulo: 'Idioma desde el inicio',
+    seccion: 'La experiencia',
+    tema: 'ink',
+    transicion: 'lente',
+    resumen: 'El menú principal, en español o en inglés',
+    html: `
+      <div class="lienzo menu">
+        <div class="menu__texto">
+          ${Deck.cabeza('Menú principal', 'Español o inglés, desde el primer toque.')}
+          <ul class="lista menu__lista" data-anim-grupo="subir" data-intervalo="110" style="--retraso:360ms">
+            <li class="menu__li-app"><span><b>Tour guiado:</b> el recorrido con la guía</span></li>
+            <li class="menu__li-idioma"><span><b class="k">ES | EN</b> cambia textos, videos y transcripciones</span></li>
+            <li class="menu__li-libre"><span><b>Tour libre:</b> aparece como «Próximamente»</span></li>
+          </ul>
+          <p class="menu__nota" data-anim="aparecer" style="--retraso:720ms">El idioma se elige en el menú y dura la sesión.</p>
+        </div>
+
+        <div class="menu__escena">
+          <div class="menu__telefono-caja" data-anim="profundidad" style="--retraso:120ms">
+            ${KitApp.telefono(KitApp.menu({ idioma: 'es' }), { estado: true, clase: 'menu__telefono' })}
+            <div class="menu__hud hud" aria-hidden="true">
+              <div><b>Idioma</b> · <i class="menu__idioma">ES · Español</i></div>
+              <div>Un toque · ES | EN</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      limpiar();
+      poner('es');
+      if (Deck.quieto()) return;
+      ciclo();
+    },
+    alSalir: function () { limpiar(); poner('es'); }
+  });
+})();

@@ -1,0 +1,94 @@
+/* 17 · Retos — titular arriba y cuatro tarjetas de campo en fila. Cada paso voltea una (rotateY):
+   la cara del problema en carmesí, el dorso de la solución en olivo. El dorso repite el problema
+   como subtítulo. El padre con perspectiva (.reto) lleva la entrada; el que gira (.reto__giro)
+   no lleva opacidad ni data-anim. */
+.diapo[data-id="retos"] .retos{justify-content:center;gap:var(--e-5)}
+.diapo[data-id="retos"] .cabeza .titular{max-width:26ch;font-size:calc(var(--u)*3.9)}
+
+.diapo[data-id="retos"] .retos__mesa{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--e-3);align-items:stretch}
+.diapo[data-id="retos"] .reto{position:relative;perspective:calc(var(--u)*110);display:flex}
+.diapo[data-id="retos"] .reto__giro{position:relative;flex:1;display:grid;transform-style:preserve-3d;
+  transition:transform 1150ms cubic-bezier(.3,1.28,.42,1)}
+.diapo[data-id="retos"] .reto--volteada .reto__giro{transform:rotateY(180deg)}
+.diapo[data-id="retos"] .reto--alzando .reto__giro{animation:retos-alza 1150ms var(--ease-entra-sale)}
+@keyframes retos-alza{0%,100%{translate:0 0 0}45%{translate:0 calc(var(--u)*-1.2) calc(var(--u)*6)}}
+.diapo[data-id="retos"].retos--sin-giro .reto__giro{transition:none}
+
+/* Caras: apiladas en la misma celda, así la tarjeta mide lo que mide la más alta */
+.diapo[data-id="retos"] .reto__cara{grid-area:1/1;position:relative;display:flex;flex-direction:column;gap:var(--e-2);
+  padding:var(--e-3) var(--e-3) calc(var(--e-3) + var(--u)*.3);border-radius:var(--r-3);overflow:hidden;
+  -webkit-backface-visibility:hidden;backface-visibility:hidden}
+.diapo[data-id="retos"] .reto__cara--frente{background:linear-gradient(165deg,rgba(240,86,106,.13),rgba(240,86,106,.02) 46%),#211A15;
+  border:1px solid rgba(240,86,106,.32);box-shadow:inset 0 2px 0 rgba(240,86,106,.55)}
+.diapo[data-id="retos"] .reto__cara--dorso{transform:rotateY(180deg);background:linear-gradient(165deg,rgba(157,179,90,.16),rgba(157,179,90,.03) 46%),#1D1C14;
+  border:1px solid rgba(157,179,90,.38);box-shadow:inset 0 2px 0 rgba(157,179,90,.7)}
+/* Un brillo dorado cruza el dorso cuando la tarjeta termina de voltear: la capa que lo resolvió */
+.diapo[data-id="retos"] .reto__cara--dorso::after{content:'';position:absolute;top:-20%;bottom:-20%;left:0;width:40%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(230,186,98,.2) 45%,rgba(244,216,146,.32) 50%,rgba(230,186,98,.2) 55%,transparent);
+  translate:-120% 0;rotate:8deg}
+.diapo[data-id="retos"].anim-activa .reto--volteada .reto__cara--dorso::after{animation:retos-brillo 1300ms var(--ease-suave) 700ms both}
+@keyframes retos-brillo{from{translate:-120% 0}to{translate:330% 0}}
+
+.diapo[data-id="retos"] .reto__tag{margin:0;display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);
+  font-size:var(--t-etiqueta);letter-spacing:.12em;text-transform:uppercase;color:var(--texto-mute)}
+.diapo[data-id="retos"] .reto__tag b{font-weight:500;display:inline-flex;align-items:center;gap:.6em}
+.diapo[data-id="retos"] .reto__tag b::before{content:'';width:.55em;height:.55em;border-radius:50%;background:currentColor;
+  box-shadow:0 0 0 .3em color-mix(in srgb,currentColor 20%,transparent)}
+.diapo[data-id="retos"] .reto__cara--frente .reto__tag b{color:var(--problema)}
+.diapo[data-id="retos"] .reto__cara--dorso .reto__tag b{color:var(--resuelto)}
+
+/* Pictogramas de levantamiento */
+.diapo[data-id="retos"] .reto__picto{display:block;width:100%;aspect-ratio:160/90;max-height:calc(var(--alto-util)*.24);margin:var(--e-1) 0;overflow:visible}
+.diapo[data-id="retos"] .reto__picto *{vector-effect:non-scaling-stroke}
+.diapo[data-id="retos"] .p-m ellipse{fill:none;stroke:var(--barro-claro);stroke-width:1.1;opacity:.55}
+.diapo[data-id="retos"] .p-apagado{opacity:.35}
+.diapo[data-id="retos"] .p-l{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.diapo[data-id="retos"] .p-l--fina{stroke-width:1.3}
+.diapo[data-id="retos"] .p-d{fill:none;stroke-width:1.5;stroke-dasharray:3 4}
+.diapo[data-id="retos"] circle.p-d{fill:color-mix(in srgb,currentColor 8%,transparent)}
+.diapo[data-id="retos"] .p-d--2{opacity:.5}
+.diapo[data-id="retos"] .p-r--chico{opacity:.65}
+.diapo[data-id="retos"] .reto__cara--frente .reto__picto{color:var(--problema)}
+.diapo[data-id="retos"] .reto__cara--dorso .reto__picto{color:var(--resuelto)}
+.diapo[data-id="retos"] .reto__picto .p-l,.diapo[data-id="retos"] .reto__picto .p-d{stroke:currentColor}
+.diapo[data-id="retos"] .reto__picto .p-r{fill:currentColor}
+
+/* Textos */
+.diapo[data-id="retos"] .reto__problema{margin:auto 0 0;font-size:var(--t-lead);font-weight:600;line-height:1.3;letter-spacing:-.01em;color:var(--texto)}
+.diapo[data-id="retos"] .reto__antes{margin:auto 0 0;display:flex;gap:.55em;font-size:var(--t-chico);line-height:1.4;color:var(--texto-mute)}
+.diapo[data-id="retos"] .reto__antes::before{content:'';flex:none;width:.9em;height:2px;margin-top:.68em;background:var(--problema);opacity:.8}
+.diapo[data-id="retos"] .reto__solucion{margin:0;font-size:var(--t-lead);font-weight:700;line-height:1.28;letter-spacing:-.01em;color:var(--texto)}
+
+/* La sombra sobre la mesa se angosta a medio giro */
+.diapo[data-id="retos"] .reto__sombra{position:absolute;left:8%;right:8%;bottom:calc(var(--u)*-1.2);height:calc(var(--u)*1.6);border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.55),transparent);z-index:-1;pointer-events:none}
+.diapo[data-id="retos"] .reto--alzando .reto__sombra{animation:retos-sombra 1150ms var(--ease-entra-sale)}
+@keyframes retos-sombra{0%,100%{scale:1;opacity:1}45%{scale:.25 1.3;opacity:.45}}
+
+.modo-captura .diapo[data-id="retos"] .reto__giro{transition:none}
+.modo-captura .diapo[data-id="retos"] .reto__cara--dorso::after,.modo-captura .diapo[data-id="retos"] .reto__sombra{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="retos"] .reto__giro{transition:transform 1ms;animation:none!important}
+  .diapo[data-id="retos"] .reto__cara--dorso::after,.diapo[data-id="retos"] .reto__sombra{animation:none!important}
+}
+
+/* Vertical: tableta 2 × 2; teléfono, una columna con el pictograma al lado */
+@media (orientation:portrait){
+  .diapo[data-id="retos"] .retos{justify-content:flex-start}
+  .diapo[data-id="retos"] .cabeza .titular{font-size:var(--t-1);max-width:none}
+  .diapo[data-id="retos"] .retos__mesa{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e-4) var(--e-3)}
+  .diapo[data-id="retos"] .reto__picto{max-height:none}
+}
+@media (orientation:portrait) and (max-width:719px){
+  .diapo[data-id="retos"] .retos__mesa{grid-template-columns:minmax(0,1fr);gap:var(--e-4)}
+  .diapo[data-id="retos"] .reto{perspective:900px}
+  .diapo[data-id="retos"] .reto__cara{display:grid;grid-template-columns:38% minmax(0,1fr);grid-template-rows:auto auto 1fr;column-gap:14px;row-gap:6px;padding:14px 16px 16px}
+  .diapo[data-id="retos"] .reto__tag{grid-column:1/-1}
+  .diapo[data-id="retos"] .reto__picto{grid-column:1;grid-row:2/4;align-self:center;margin:0}
+  .diapo[data-id="retos"] .reto__problema{grid-column:2;grid-row:2/4;align-self:center;margin:0}
+  .diapo[data-id="retos"] .reto__antes{grid-column:2;grid-row:2;margin:0}
+  .diapo[data-id="retos"] .reto__solucion{grid-column:2;grid-row:3}
+}
+@media (orientation:portrait) and (min-width:720px){
+  .diapo[data-id="retos"] .reto__picto{max-height:calc(var(--u)*14)}
+}

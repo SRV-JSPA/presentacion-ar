@@ -1,0 +1,78 @@
+/* 14 · Arquitectura — bone. Las tres capas de la app (pantallas-arquitectura.md § B.1) como una pila
+   isométrica en 3D (CSS, proyección ortogonal), escalonada como un montículo: abajo los 4 módulos de
+   FeatureModules con el nombre de su interfaz pública (§ B.3), encima Shared (EventBus y
+   AppStateManager) y arriba App (AppContainer, AppRouter y las pantallas). Animación propia: primero se
+   traza el desplante en el suelo y luego cada etapa constructiva cae desde arriba y se asienta, de
+   abajo hacia arriba, como las etapas de un montículo. La nota honesta: un solo target de Xcode.
+   ARModuleInterface es una clase vacía; la superficie real del módulo RA es ARModuleView (§ B.3). */
+(function () {
+  /* Medidas en unidades de --k. x: largo, y: fondo, z: alto. */
+  var X = 4.98, Y = 1.0;
+  var CAPAS = [
+    { id: 'modulos', nombre: 'Módulos', z: 0, h: .52, y: 0, d: 1.0, x0: 0, largo: X, gap: .06, retraso: 650,
+      piezas: [['GPS', 'GPSModule<wbr>Interface'], ['Realidad aumentada', 'ARModuleView'],
+        ['Guía virtual', 'VirtualGuide<wbr>Module<wbr>Interface'], ['Idioma', 'Language<wbr>Service']] },
+    { id: 'shared', nombre: 'Shared', z: .52, h: .4, y: .14, d: .72, x0: .3, largo: X - .6, gap: .06, retraso: 1900,
+      piezas: [['EventBus', ''], ['AppStateManager', '']] },
+    { id: 'app', nombre: 'App', z: .92, h: .4, y: .26, d: .48, x0: .68, largo: X - 1.36, gap: .06, retraso: 2950,
+      piezas: [['AppContainer', ''], ['AppRouter', ''], ['Pantallas', '']] }
+  ];
+
+  function k(n) { return 'calc(var(--k)*' + (+n).toFixed(3) + ')'; }
+
+  function caja(capa, i, n) {
+    var L = (capa.largo - capa.gap * (n - 1)) / n, x = capa.x0 + i * (L + capa.gap), p = capa.piezas[i];
+    var frente = capa.id === 'modulos'
+      ? '<span class="arq__n">' + p[0] + '</span><code class="arq__i">' + p[1] + '</code>'
+      : '<code class="arq__n arq__n--code">' + p[0] + '</code>';
+    if (capa.id === 'app' && i === 2) frente = '<span class="arq__n">Pantallas</span>';
+    return '<div class="arq__caja arq__caja--' + capa.id + '" style="left:' + k(x) + ';top:' + k(capa.y) + ';width:' + k(L) + ';height:' + k(capa.d) +
+        ';translate:0 0 ' + k(capa.z) + ';--h:' + k(capa.h) + ';--d:' + (capa.retraso + i * 120) + 'ms">' +
+        '<div class="arq__cara arq__cara--sup"></div>' +
+        '<div class="arq__cara arq__cara--frente"><div class="arq__texto">' + frente + '</div></div>' +
+        (i === 0 ? '<div class="arq__cara arq__cara--lado"><span class="arq__capa">' + capa.nombre + '</span></div>' : '') +
+        '<i class="arq__polvo"></i>' +
+      '</div>';
+  }
+
+  function pila() {
+    var h = '';
+    CAPAS.forEach(function (c) { c.piezas.forEach(function (_, i) { h += caja(c, i, c.piezas.length); }); });
+    return '<div class="arq__plano" style="width:' + k(X) + ';height:' + k(Y) + '">' +
+      '<svg class="arq__desplante" viewBox="0 0 498 100" preserveAspectRatio="none" aria-hidden="true">' +
+        '<rect x="-14" y="-14" width="526" height="128" pathLength="1"/></svg>' +
+      h + '</div>';
+  }
+
+  Presentacion.diapositiva({
+    id: 'arquitectura',
+    titulo: 'Arquitectura modular',
+    seccion: 'Ingeniería',
+    tema: 'bone',
+    transicion: 'estrato',
+    resumen: 'App, Shared y cuatro módulos',
+    html: `
+      <div class="lienzo arq">
+        <div class="arq__texto-col">
+          ${Deck.cabeza('Arquitectura', 'Cuatro módulos, cada uno con su punto de entrada.')}
+          <ul class="lista arq__capas">
+            <li class="arq__li arq__li--app" data-anim="subir" style="--retraso:3250ms"><span><b>App</b> · AppContainer, AppRouter y pantallas</span></li>
+            <li class="arq__li arq__li--shared" data-anim="subir" style="--retraso:2200ms"><span><b>Shared</b> · EventBus y AppStateManager</span></li>
+            <li class="arq__li arq__li--modulos" data-anim="subir" style="--retraso:1150ms"><span><b>Módulos</b> · GPS · Realidad aumentada · Guía virtual · Idioma</span></li>
+          </ul>
+          <p class="arq__nota" data-anim="aparecer" style="--retraso:3900ms">${Motivos.esquinas()}Todo el código de la app vive en un solo target de Xcode: la separación es por carpetas e interfaces.</p>
+        </div>
+
+        <div class="arq__escena" aria-label="Pila de tres capas: App arriba, Shared en medio y los cuatro módulos en la base">
+          <div class="arq__iso">${pila()}</div>
+          <ul class="arq__interfaces" aria-hidden="true">
+            <li><b>GPS</b><code>GPSModuleInterface</code></li>
+            <li><b>Realidad aumentada</b><code>ARModuleView</code></li>
+            <li><b>Guía virtual</b><code>VirtualGuideModuleInterface</code></li>
+            <li><b>Idioma</b><code>LanguageService</code></li>
+          </ul>
+        </div>
+      </div>
+    `
+  });
+})();

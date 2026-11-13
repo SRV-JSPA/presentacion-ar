@@ -1,0 +1,68 @@
+/* 10 · Modelos — texto, pestañas y ficha a la izquierda; el visor 3D interactivo a la derecha. */
+.diapo[data-id="modelos"] .mod{display:grid;grid-template-columns:minmax(0,38fr) minmax(0,62fr);align-items:center;gap:var(--e-4)}
+.diapo[data-id="modelos"] .mod__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-4);position:relative;z-index:2}
+.diapo[data-id="modelos"] .cabeza .titular{max-width:14ch;font-size:calc(var(--u)*3.7)}
+
+/* Pestañas: dos botones; la activa en oro (la capa aumentada) */
+.diapo[data-id="modelos"] .mod__tabs{display:flex;gap:var(--e-2);flex-wrap:wrap}
+.diapo[data-id="modelos"] .mod__tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:.25em;margin:0;cursor:pointer;
+  padding:.75em 1.1em .7em;border-radius:var(--r-1,6px);border:1px solid color-mix(in srgb,var(--texto) 18%,transparent);
+  background:color-mix(in srgb,var(--bone) 60%,transparent);color:var(--texto-2);font:inherit;text-align:left;
+  transition:border-color .35s,background-color .35s,color .35s}
+.diapo[data-id="modelos"] .mod__tab:hover{border-color:color-mix(in srgb,var(--oro-trazo) 55%,transparent)}
+.diapo[data-id="modelos"] .mod__tab-n{font-family:var(--f-titular);font-weight:700;font-size:var(--t-texto);letter-spacing:-.01em;line-height:1.2}
+.diapo[data-id="modelos"] .mod__tab-a{font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.04em;color:var(--texto-mute);line-height:1.2}
+.diapo[data-id="modelos"] .mod__tab::after{content:'';position:absolute;left:1.1em;right:1.1em;bottom:-1px;height:2px;border-radius:2px;background:var(--oro-trazo);
+  transform:scaleX(0);transform-origin:0 50%;transition:transform .5s var(--ease-expo)}
+.diapo[data-id="modelos"] .mod__tab[aria-selected="true"]{border-color:var(--oro-trazo);background:color-mix(in srgb,var(--oro-trazo) 12%,var(--bone));color:var(--texto)}
+.diapo[data-id="modelos"] .mod__tab[aria-selected="true"] .mod__tab-a{color:var(--acento)}
+.diapo[data-id="modelos"] .mod__tab[aria-selected="true"]::after{transform:scaleX(1)}
+.diapo[data-id="modelos"] .mod__tab:focus-visible{outline:2px solid var(--oro-trazo);outline-offset:3px}
+
+/* Ficha en mono: archivo, vértices y triángulos que suben con el armado */
+.diapo[data-id="modelos"] .mod__ficha-caja{position:relative;padding-bottom:var(--e-2)}
+.diapo[data-id="modelos"] .mod__ficha{display:grid;grid-template-columns:auto auto auto;gap:var(--e-2) var(--e-5);margin:0}
+.diapo[data-id="modelos"] .mod__ficha div{display:flex;flex-direction:column;gap:.3em}
+.diapo[data-id="modelos"] .mod__ficha dt{font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.12em;text-transform:uppercase;color:var(--texto-mute)}
+.diapo[data-id="modelos"] .mod__ficha dd{margin:0;font-family:var(--f-mono);font-weight:500;font-size:var(--t-3);letter-spacing:-.02em;line-height:1.1;
+  color:var(--texto);font-variant-numeric:tabular-nums;white-space:nowrap}
+.diapo[data-id="modelos"] .mod__ficha dd.mod__archivo{font-size:var(--t-chico);letter-spacing:0;line-height:calc(var(--t-3)*1.1);color:var(--acento)}
+.diapo[data-id="modelos"] .mod__barra{position:absolute;left:0;right:0;bottom:0;height:2px;background:color-mix(in srgb,var(--texto) 12%,transparent);border-radius:2px;overflow:hidden}
+.diapo[data-id="modelos"] .mod__barra i{position:absolute;inset:0;background:var(--oro-trazo);transform-origin:0 50%}
+.diapo[data-id="modelos"] .mod__gestos{gap:var(--e-2)}
+.diapo[data-id="modelos"] .mod__nota{margin:0;font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.04em;line-height:1.5;color:var(--texto-mute);
+  padding-top:var(--e-3);border-top:1px solid var(--linea);max-width:none}
+
+/* Visor */
+.diapo[data-id="modelos"] .mod__escena{display:flex;align-items:center;justify-content:center;height:var(--alto-util)}
+.diapo[data-id="modelos"] .mod__marco{position:relative;width:100%;height:min(100%,calc(var(--alto-util)*.94));
+  background:radial-gradient(closest-side,rgba(255,250,236,.75),transparent 85%)}
+.diapo[data-id="modelos"] .mod__marco>.esquinas{--esq-tam:calc(var(--u)*2.2)}
+.diapo[data-id="modelos"] .mod__visor{position:absolute;inset:calc(var(--u)*1.4);opacity:0;visibility:hidden;transition:opacity .45s,visibility 0s .45s}
+.diapo[data-id="modelos"] .mod__visor--activo{opacity:1;visibility:visible;transition:opacity .2s,visibility 0s}
+/* Mientras cambia de modelo, el que sale sigue visible hasta desarmarse */
+.diapo[data-id="modelos"] .mod--cambio .mod__visor{visibility:visible}
+.diapo[data-id="modelos"] .mod__rotulo{position:absolute;left:calc(var(--u)*3);top:calc(var(--u)*2.4);z-index:2}
+.diapo[data-id="modelos"] .mod__hud{position:absolute;right:calc(var(--u)*3);bottom:calc(var(--u)*2.2);text-align:right;pointer-events:none;z-index:2}
+
+.modo-captura .diapo[data-id="modelos"] .mod__visor,.modo-captura .diapo[data-id="modelos"] .mod__tab,
+.modo-captura .diapo[data-id="modelos"] .mod__tab::after{transition:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="modelos"] .mod__visor,.diapo[data-id="modelos"] .mod__tab::after{transition:none}
+}
+
+/* Vertical: titular, pestañas, visor cuadrado, ficha, gestos y nota */
+@media (orientation:portrait){
+  .diapo[data-id="modelos"] .mod{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="modelos"] .mod__texto{display:contents}
+  .diapo[data-id="modelos"] .cabeza{order:1}
+  .diapo[data-id="modelos"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="modelos"] .mod__tabs{order:2}
+  .diapo[data-id="modelos"] .mod__tab{flex:1 1 0;min-width:0}
+  .diapo[data-id="modelos"] .mod__escena{order:3;height:auto}
+  .diapo[data-id="modelos"] .mod__marco{height:auto;aspect-ratio:1}
+  .diapo[data-id="modelos"] .mod__ficha-caja{order:4}
+  .diapo[data-id="modelos"] .mod__ficha{column-gap:var(--e-4)}
+  .diapo[data-id="modelos"] .mod__gestos{order:5}
+  .diapo[data-id="modelos"] .mod__nota{order:6}
+}

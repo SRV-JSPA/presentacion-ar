@@ -1,0 +1,111 @@
+/* 07 · Guía — ink. El teléfono en pleno tour (cámara, botones RA, recuadro de la guía) y, levantada
+   de él como la capa que es, una lupa del recuadro a tamaño legible. La transcripción real de «Datos
+   arqueológicos» (VideoTranscripts.swift:31-67) se resalta línea por línea al ritmo del observador de
+   0,2 s de la app. Paso 1: el recuadro voltea en 3D de video a mapa, en la lupa y en el teléfono. */
+(function () {
+  var CUES = KitApp.GUIONES['datos-arqueologicos'];
+  var rLupa = null, rTel = null, obs = null, el0 = null;
+
+  function recuadro(op) {
+    return KitApp.recuadro(Object.assign({ modo: 'video', guia: 'img/guia-datos-generales.png', transcripcion: CUES, actual: 3,
+      mapa: { destino: 'Montículo C-II-6' } }, op || {}));
+  }
+
+  /* Las dos trazas doradas que unen el recuadro del teléfono con su lupa */
+  function trazarHaz() {
+    if (!el0) return;
+    var esc = el0.querySelector('.guia__escena'), svg = el0.querySelector('.guia__haz');
+    var a = el0.querySelector('.guia__telefono .app-recuadro'), b = el0.querySelector('.guia__lupa-caja');
+    if (!esc || !svg || !a || !b) return;
+    var E = esc.getBoundingClientRect(); if (!E.width) return;
+    var k = esc.offsetWidth / E.width;
+    var ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    function p(x, y) { return ((x - E.left) * k).toFixed(1) + ',' + ((y - E.top) * k).toFixed(1); }
+    svg.setAttribute('viewBox', '0 0 ' + esc.offsetWidth + ' ' + esc.offsetHeight);
+    var l = svg.querySelectorAll('line');
+    [[ra.left, ra.top, rb.right, rb.top], [ra.left, ra.bottom, rb.right, rb.bottom]].forEach(function (c, i) {
+      var p1 = p(c[0], c[1]).split(','), p2 = p(c[2], c[3]).split(',');
+      l[i].setAttribute('x1', p1[0]); l[i].setAttribute('y1', p1[1]); l[i].setAttribute('x2', p2[0]); l[i].setAttribute('y2', p2[1]);
+    });
+  }
+
+  function mostrarTiempo(t, i) {
+    if (!el0) return;
+    var s = el0.querySelector('.guia__t'), n = el0.querySelector('.guia__n');
+    if (s) s.textContent = t.toFixed(1).replace('.', ',') + ' s';
+    if (n) n.textContent = (i >= 0 ? i + 1 : '–') + ' / ' + CUES.length;
+  }
+
+  function aplicarPaso(el, n) {
+    var modo = n >= 1 ? 'mapa' : 'video';
+    el.querySelectorAll('.app-recuadro').forEach(function (r) { KitApp.modoRecuadro(r, modo); });
+    /* En la captura (todos los pasos) se ven las dos caras: la lupa con la transcripción, el teléfono con el mapa */
+    if (document.documentElement.classList.contains('modo-captura')) KitApp.modoRecuadro(el.querySelector('.guia__lupa .app-recuadro'), 'video');
+    el.classList.toggle('guia--mapa', n >= 1);
+    if (!rLupa) return;
+    if (n >= 1 || Deck.quieto()) rLupa.detener(); else if (!rLupa.activo) rLupa.iniciar();
+  }
+
+  Presentacion.diapositiva({
+    id: 'guia',
+    titulo: 'Guía virtual',
+    seccion: 'La experiencia',
+    tema: 'ink',
+    transicion: 'iris',
+    resumen: 'Narración con transcripción; video o mapa con un toque',
+    html: `
+      <div class="lienzo guia">
+        <div class="guia__texto">
+          ${Deck.cabeza('Guía virtual', 'Una guía que narra, y que también se lee.')}
+          <ul class="lista guia__lista" data-anim-grupo="subir" data-intervalo="110" style="--retraso:380ms">
+            <li><span><b>16 videos</b> por idioma, con la guía animada</span></li>
+            <li><span>Transcripción a un toque, sincronizada cada <span class="k">0,2 s</span></span></li>
+            <li class="guia__toque"><span>Un toque alterna entre video y mapa</span></li>
+          </ul>
+        </div>
+
+        <div class="guia__escena">
+          <svg class="guia__haz" aria-hidden="true" data-decorativo><line pathLength="1"/><line pathLength="1"/></svg>
+          <div class="guia__telefono-caja" data-anim="derecha" style="--retraso:120ms">
+            ${KitApp.telefono(KitApp.camara() + KitApp.botonesRA({ siguiente: 'play', bloqueado: true }) + recuadro(), { clase: 'guia__telefono' })}
+          </div>
+          <div class="guia__lupa">
+            <div class="guia__lupa-caja">
+              <div class="pantalla" data-ancho="366" data-alto="236"><div class="app app--suelta">${recuadro({ suelto: true })}</div></div>
+              ${Motivos.esquinas()}
+            </div>
+            <div class="guia__hud hud" aria-hidden="true">
+              <div><b>Observador</b> · cada 0,2 s</div>
+              <div class="guia__hud-vivo">t <i class="guia__t">22,7 s</i> · línea <i class="guia__n">4 / 7</i></div>
+              <div class="guia__hud-mapa" data-paso="1">Un toque · <i>video ↔ mapa</i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      if (!rLupa) {
+        var lupa = el.querySelector('.guia__lupa .app-recuadro'), tel = el.querySelector('.guia__telefono .app-recuadro');
+        rTel = KitApp.reproductor(tel, CUES);
+        rLupa = KitApp.reproductor(lupa, CUES, {
+          desde: 0,
+          alTiempo: function (t) { rTel.ir(t); mostrarTiempo(t, rLupa ? rLupa.actual : -1); }
+        });
+        if (window.ResizeObserver) { obs = new ResizeObserver(function () { trazarHaz(); rLupa.centrar(); rTel.centrar(); }); obs.observe(el.querySelector('.guia__escena')); }
+      }
+      if (Deck.quieto()) {
+        rLupa.linea(3);
+        rTel.linea(3);
+        mostrarTiempo(CUES[3][0] + .1, 3);
+      } else {
+        rLupa.ir(0);
+      }
+      aplicarPaso(el, Deck.paso());
+      requestAnimationFrame(trazarHaz);
+      setTimeout(trazarHaz, 1150);  /* cuando termina la transición y la entrada de la lupa */
+    },
+    alPaso: function (el, n) { aplicarPaso(el, n); },
+    alSalir: function () { if (rLupa) rLupa.detener(); }
+  });
+})();

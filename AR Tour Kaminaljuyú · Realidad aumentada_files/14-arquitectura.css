@@ -1,0 +1,106 @@
+/* 14 · Arquitectura — texto a la izquierda; a la derecha la pila isométrica (CSS 3D ortogonal),
+   escalonada como un montículo: Módulos, Shared y App. */
+.diapo[data-id="arquitectura"] .arq{display:grid;grid-template-columns:minmax(0,36fr) minmax(0,64fr);align-items:center;gap:var(--e-3)}
+.diapo[data-id="arquitectura"] .arq__texto-col{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-5);position:relative;z-index:2}
+.diapo[data-id="arquitectura"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*3.7)}
+.diapo[data-id="arquitectura"] .arq__capas{gap:var(--e-2)}
+.diapo[data-id="arquitectura"] .arq__capas b{font-weight:700}
+.diapo[data-id="arquitectura"] .arq__li--app::before{border-color:var(--app);background:var(--app)}
+.diapo[data-id="arquitectura"] .arq__li--shared::before{background:var(--oro-trazo)}
+.diapo[data-id="arquitectura"] .arq__li--modulos::before{border-color:var(--barro);background:var(--barro-claro)}
+.diapo[data-id="arquitectura"] .arq__nota{position:relative;margin:0;padding:.85em 1.15em;font-size:var(--t-chico);line-height:1.45;font-weight:500;color:var(--texto-2);
+  background:color-mix(in srgb,var(--oro-tema) 7%,transparent);max-width:34ch}
+.diapo[data-id="arquitectura"] .arq__nota>.esquinas{--esq-tam:.8em}
+
+/* ── La escena ── */
+.diapo[data-id="arquitectura"] .arq__escena{position:relative;height:var(--alto-util);
+  --k:min(calc(var(--u)*13.4),calc(var(--alto-util)*.265))}
+.diapo[data-id="arquitectura"] .arq__iso{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d}
+/* El plano del suelo en isométrica verdadera; se baja para centrar lo que sube */
+.diapo[data-id="arquitectura"] .arq__plano{position:absolute;left:0;top:0;transform-style:preserve-3d;
+  translate:-50% -50%;transform:translateY(calc(var(--k)*.3)) rotateX(54.7356deg) rotateZ(-45deg)}
+.diapo[data-id="arquitectura"] .arq__desplante{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.diapo[data-id="arquitectura"] .arq__desplante rect{fill:rgba(185,132,36,.06);stroke:var(--oro-trazo);stroke-width:1.4;vector-effect:non-scaling-stroke;
+  stroke-dasharray:1;stroke-dashoffset:0}
+
+.diapo[data-id="arquitectura"] .arq__caja{position:absolute;transform-style:preserve-3d}
+.diapo[data-id="arquitectura"] .arq__cara{position:absolute;box-sizing:border-box;border:1px solid rgba(92,67,48,.45);backface-visibility:hidden}
+.diapo[data-id="arquitectura"] .arq__cara--sup{inset:0;transform:translateZ(var(--h))}
+/* Frente (lado y máximo): se levanta sobre su borde inferior */
+.diapo[data-id="arquitectura"] .arq__cara--frente{left:0;right:0;bottom:0;height:var(--h);transform-origin:50% 100%;transform:rotateX(-90deg)}
+/* Lado (x mínimo): se levanta sobre su borde izquierdo */
+.diapo[data-id="arquitectura"] .arq__cara--lado{left:0;top:0;bottom:0;width:var(--h);transform-origin:0 50%;transform:rotateY(-90deg)}
+
+/* Colores por estrato: barro los módulos, oro tenue Shared, terracota la app */
+.diapo[data-id="arquitectura"] .arq__caja--modulos .arq__cara--sup{background:#EBDCBD}
+.diapo[data-id="arquitectura"] .arq__caja--modulos .arq__cara--frente{background:#D8BF98}
+.diapo[data-id="arquitectura"] .arq__caja--modulos .arq__cara--lado{background:#B99671}
+.diapo[data-id="arquitectura"] .arq__caja--shared .arq__cara--sup{background:#F3E1B6}
+.diapo[data-id="arquitectura"] .arq__caja--shared .arq__cara--frente{background:#E2C17E;border-color:rgba(143,95,10,.5)}
+.diapo[data-id="arquitectura"] .arq__caja--shared .arq__cara--lado{background:#C29A50;border-color:rgba(143,95,10,.5)}
+.diapo[data-id="arquitectura"] .arq__caja--app .arq__cara--sup{background:#EFB08F}
+.diapo[data-id="arquitectura"] .arq__caja--app .arq__cara--frente{background:#D7663E;border-color:rgba(120,40,15,.55)}
+.diapo[data-id="arquitectura"] .arq__caja--app .arq__cara--lado{background:#A84A2A;border-color:rgba(120,40,15,.55)}
+/* Alambre dorado en el borde superior de cada pieza: la interfaz que se ve desde fuera */
+.diapo[data-id="arquitectura"] .arq__cara--sup{box-shadow:inset 0 0 0 1.5px rgba(185,132,36,.0)}
+
+/* Texto sobre el frente: sigue la cara en isométrica */
+.diapo[data-id="arquitectura"] .arq__texto{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:.2em;
+  padding:0 calc(var(--k)*.09);line-height:1.12;overflow:hidden}
+.diapo[data-id="arquitectura"] .arq__n{font-weight:700;font-size:max(13px,calc(var(--u)*1.02));letter-spacing:-.01em;color:#2E2116;white-space:nowrap}
+.diapo[data-id="arquitectura"] .arq__n--code{font-family:var(--f-mono);font-weight:500;letter-spacing:0;font-size:max(12px,calc(var(--u)*.86))}
+.diapo[data-id="arquitectura"] .arq__i{font-family:var(--f-mono);font-size:max(12px,calc(var(--u)*.8));font-weight:500;color:#6B4708;line-height:1.2}
+.diapo[data-id="arquitectura"] .arq__caja--app .arq__n{color:#FFF6EC}
+.diapo[data-id="arquitectura"] .arq__caja--shared .arq__n{color:#3A2606}
+/* Nombre de la capa en el costado */
+.diapo[data-id="arquitectura"] .arq__capa{position:absolute;left:50%;top:50%;translate:-50% -50%;rotate:90deg;white-space:nowrap;
+  font-family:var(--f-mono);font-size:max(12px,calc(var(--u)*.74));font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,248,235,.92)}
+.diapo[data-id="arquitectura"] .arq__caja--modulos .arq__capa{color:#3A2A1C}
+.diapo[data-id="arquitectura"] .arq__caja--shared .arq__capa{color:#3A2606}
+
+/* Polvo al asentarse: un aro dorado en el suelo de cada pieza */
+.diapo[data-id="arquitectura"] .arq__polvo{position:absolute;inset:0;border:1.5px solid var(--oro-trazo);border-radius:2px;opacity:0;pointer-events:none}
+
+.diapo[data-id="arquitectura"] .arq__interfaces{display:none}
+
+/* ═══ Animación propia: el desplante se traza y las etapas caen y se asientan, de abajo hacia arriba ═══ */
+.diapo[data-id="arquitectura"].anim-activa .arq__desplante rect{animation:prs-dibujar 900ms var(--ease-entra-sale) 250ms both}
+.diapo[data-id="arquitectura"].anim-activa .arq__caja{animation:arq-cae 900ms linear both;animation-delay:var(--d)}
+.diapo[data-id="arquitectura"].anim-activa .arq__cara{animation:arq-aparece 360ms ease-out both;animation-delay:var(--d)}
+.diapo[data-id="arquitectura"].anim-activa .arq__polvo{animation:arq-polvo 900ms var(--ease-expo) both;animation-delay:calc(var(--d) + 440ms)}
+@keyframes arq-cae{
+  0%{transform:translateZ(calc(var(--k)*2.6));animation-timing-function:cubic-bezier(.55,0,1,.45)}
+  50%{transform:translateZ(0);animation-timing-function:cubic-bezier(0,.55,.45,1)}
+  64%{transform:translateZ(calc(var(--k)*.09));animation-timing-function:cubic-bezier(.55,0,1,.45)}
+  78%{transform:translateZ(0);animation-timing-function:cubic-bezier(0,.55,.45,1)}
+  88%{transform:translateZ(calc(var(--k)*.02))}
+  100%{transform:translateZ(0)}}
+@keyframes arq-aparece{from{opacity:0}to{opacity:1}}
+@keyframes arq-polvo{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.16)}}
+
+.modo-captura .diapo[data-id="arquitectura"] .arq__desplante rect,.modo-captura .diapo[data-id="arquitectura"] .arq__caja,
+.modo-captura .diapo[data-id="arquitectura"] .arq__cara,.modo-captura .diapo[data-id="arquitectura"] .arq__polvo{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="arquitectura"].anim-activa .arq__caja,.diapo[data-id="arquitectura"].anim-activa .arq__polvo,
+  .diapo[data-id="arquitectura"].anim-activa .arq__desplante rect{animation:none}
+  .diapo[data-id="arquitectura"].anim-activa .arq__cara{animation:prs-aparecer 300ms both}
+}
+
+/* Vertical: titular, la pila a todo el ancho, las interfaces en lista, las capas y la nota */
+@media (orientation:portrait){
+  .diapo[data-id="arquitectura"] .arq{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="arquitectura"] .arq__texto-col{display:contents}
+  .diapo[data-id="arquitectura"] .cabeza{order:1}
+  .diapo[data-id="arquitectura"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="arquitectura"] .arq__escena{order:2;height:auto;display:flex;flex-direction:column;gap:var(--e-5);container-type:inline-size;--k:calc(100cqw/4.35)}
+  .diapo[data-id="arquitectura"] .arq__iso{position:relative;left:auto;top:auto;width:100%;height:calc(var(--k)*3.75)}
+  .diapo[data-id="arquitectura"] .arq__plano{left:50%;top:50%}
+  .diapo[data-id="arquitectura"] .arq__i,.diapo[data-id="arquitectura"] .arq__capa{display:none}
+  .diapo[data-id="arquitectura"] .arq__n{font-size:12px;white-space:normal}
+  .diapo[data-id="arquitectura"] .arq__interfaces{display:grid;grid-template-columns:minmax(0,1fr);gap:.55em;list-style:none;margin:0;padding:0}
+  .diapo[data-id="arquitectura"] .arq__interfaces li{display:flex;justify-content:space-between;gap:var(--e-2);font-size:var(--t-chico);color:var(--texto-2);
+    border-bottom:1px solid var(--linea);padding-bottom:.45em}
+  .diapo[data-id="arquitectura"] .arq__interfaces code{font-family:var(--f-mono);font-size:max(12px,.86em);color:var(--acento);overflow-wrap:anywhere;text-align:right}
+  .diapo[data-id="arquitectura"] .arq__capas{order:4}
+  .diapo[data-id="arquitectura"] .arq__nota{order:5;max-width:none}
+}

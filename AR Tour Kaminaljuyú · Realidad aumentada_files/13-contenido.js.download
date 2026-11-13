@@ -1,0 +1,170 @@
+/* 13 · Contenido — ink. Un ecualizador con los 16 videos del tour, en el orden de la cola
+   (VirtualGuideModuleInterface.swift:100-166): cada barra mide la duración real del archivo en
+   español (ffprobe, notas/investigacion/guia-idioma.md § 4.3). Al entrar, las barras oscilan como un
+   ecualizador y se asientan en su duración. Paso 1: el selector pasa a EN y cada barra se acorta o se
+   alarga a la duración en inglés; la marca punteada deja ver dónde estaba en español.
+   Oro lleno: los 10 videos de estructura (videoMap, :75-86). Oro en contorno: introducción, avisos
+   y despedida. Cifras: hechos.md (totales con la bienvenida, 17 videos). */
+(function () {
+  /* [rótulo, nombre corto, s ES, s EN, estructura] */
+  var VIDEOS = [
+    ['Datos', 'generales', 18.94, 14.94, 0],
+    ['Datos', 'arqueológicos', 47.54, 35.79, 0],
+    ['Flecha', 'indicación', 4.84, 3.34, 0],
+    ['Proximidad', 'indicación', 4.26, 3.71, 0],
+    ['Punto', 'de interés', 5.68, 4.13, 0],
+    ['C-II-6', 'montículo', 32.40, 26.52, 1],
+    ['C-II-4', 'Acrópolis', 123.48, 93.15, 1],
+    ['C-II-3', 'montículo', 37.09, 28.00, 1],
+    ['C-II-5', 'montículo', 46.76, 36.02, 1],
+    ['C-II-7', 'montículo', 33.99, 26.92, 1],
+    ['C-II-8', 'montículo', 57.03, 39.00, 1],
+    ['C-II-12', 'montículo', 35.76, 23.90, 1],
+    ['E', 'Estructura', 174.52, 142.94, 1],
+    ['C-II-14', 'montículo', 62.41, 58.46, 1],
+    ['C-II-13', 'montículo', 78.16, 64.68, 1],
+    ['Despedida', '', 7.37, 5.09, 0]
+  ];
+  var MAX = 180;   /* escala: 3 min */
+
+  var el0 = null, cols = [], bucle = null, cancelar = null, relojes = [], pasoPrevio = 0, idioma = 'es';
+
+  function seg(s) { return Math.round(s) + ' s'; }
+
+  function columnas() {
+    return VIDEOS.map(function (v, i) {
+      return '<li class="cont__col' + (v[4] ? ' cont__col--estructura' : '') + '" style="--es:' + (v[2] / MAX).toFixed(4) + ';--en:' + (v[3] / MAX).toFixed(4) + ';--i:' + i + '">' +
+        '<span class="cont__val" data-es="' + seg(v[2]) + '" data-en="' + seg(v[3]) + '">' + seg(v[2]) + '</span>' +
+        '<span class="cont__pista"><i class="cont__barra"></i><i class="cont__marca"></i></span>' +
+        '<span class="cont__lbl"><b>' + v[0] + '</b><small>' + (v[1] || '&nbsp;') + '</small></span>' +
+      '</li>';
+    }).join('');
+  }
+
+  function rejilla() {
+    return [60, 120, 180].map(function (s) {
+      return '<span class="cont__regla" style="--p:' + (s / MAX) + '"><i>' + (s / 60) + ' min</i></span>';
+    }).join('');
+  }
+
+  /* Pone el alto de cada barra (0…1 de la escala) */
+  function poner(vals) {
+    cols.forEach(function (c, i) { c.style.setProperty('--v', vals[i].toFixed(4)); });
+  }
+  function objetivo(id) { return VIDEOS.map(function (v) { return (id === 'en' ? v[3] : v[2]) / MAX; }); }
+
+  function marcarIdioma(id) {
+    idioma = id;
+    if (!el0) return;
+    el0.classList.toggle('cont--en', id === 'en');
+    el0.querySelectorAll('.cont__val').forEach(function (v) { v.textContent = v.getAttribute('data-' + id); });
+  }
+
+  function limpiar() {
+    if (bucle) { bucle.detener(); bucle = null; }
+    if (cancelar) { cancelar(); cancelar = null; }
+    relojes.forEach(clearTimeout); relojes = [];
+  }
+
+  /* Entrada: ecualizador que oscila y se asienta en la duración real */
+  function ecualizar(id) {
+    var meta = objetivo(id), az = Deck.azar(13), fase = VIDEOS.map(function () { return [az() * 6.3, 5 + az() * 7, .35 + az() * .5]; });
+    var DUR = 2.1;
+    poner(meta.map(function () { return 0; }));
+    bucle = Deck.bucle(function (dt, t) {
+      var vals = meta.map(function (m, i) {
+        var e = Math.min(1, Math.max(0, (t - .15 - i * .035) / DUR));
+        var asentar = 1 - Math.pow(1 - e, 3);
+        var f = fase[i], ruido = (.5 + .5 * Math.sin(t * f[1] + f[0])) * f[2] * (.55 + .45 * Math.sin(t * 2.3 + i));
+        return m * asentar + ruido * (1 - asentar) * Math.min(1, t * 3);
+      });
+      poner(vals);
+      if (t > DUR + .8) { poner(meta); bucle.detener(); bucle = null; }
+    });
+    bucle.iniciar();
+  }
+
+  /* ES ↔ EN: cada barra cambia de largo, escalonada, con un leve rebote */
+  function cambiar(desde, hacia) {
+    var a = objetivo(desde), b = objetivo(hacia);
+    marcarIdioma(hacia);
+    cancelar = Deck.tween(1500, function (e) {
+      poner(a.map(function (x, i) {
+        var k = Math.min(1, Math.max(0, (e * 1500 - i * 45) / 900));
+        k = Deck.curvas.rebote(k);
+        return x + (b[i] - x) * k;
+      }));
+    }, null, 'lineal');
+  }
+
+  function irA(n, instantaneo) {
+    limpiar();
+    var id = n >= 1 ? 'en' : 'es';
+    if (instantaneo || Deck.quieto()) { marcarIdioma(id); poner(objetivo(id)); return; }
+    cambiar(idioma, id);
+  }
+
+  Presentacion.diapositiva({
+    id: 'contenido',
+    titulo: 'Narración bilingüe',
+    seccion: 'Contenido',
+    tema: 'ink',
+    transicion: 'lente',
+    resumen: 'Diez estructuras narradas en español e inglés',
+    html: `
+      <div class="lienzo cont">
+        <div class="cont__arriba">
+          ${Deck.cabeza('Contenido', 'Diez estructuras narradas en dos idiomas.')}
+          <dl class="cont__cifras" data-anim-grupo="subir" data-intervalo="90" style="--retraso:300ms">
+            <div class="cont__cifra cont__cifra--es">
+              <dt><span data-contar="12">12</span> min <span data-contar="55">55</span> s</dt>
+              <dd>en español</dd>
+            </div>
+            <div class="cont__cifra cont__cifra--en">
+              <dt><span data-contar="10">10</span> min <span data-contar="11">11</span> s</dt>
+              <dd>en inglés</dd>
+            </div>
+            <div class="cont__cifra">
+              <dt><span data-contar="52">52</span></dt>
+              <dd>textos por idioma</dd>
+            </div>
+            <div class="cont__cifra">
+              <dt><span data-contar="122">122</span> / <span data-contar="151">151</span></dt>
+              <dd>líneas de los 16 videos</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="cont__eq" data-anim="aparecer" style="--retraso:120ms">
+          <div class="cont__barra-sup">
+            <div class="cont__idioma" aria-label="Idioma de la narración">
+              <b class="cont__es">ES</b><i>|</i><b class="cont__en">EN</b>
+            </div>
+            <p class="cont__leyenda">
+              <span class="cont__ley cont__ley--estructura">Estructura narrada</span>
+              <span class="cont__ley cont__ley--guia">Introducción, avisos y despedida</span>
+              <span class="cont__ley cont__ley--marca" data-paso="1">Duración en español</span>
+            </p>
+            <p class="cont__nota hud" aria-hidden="true">17 videos · <i>con la bienvenida</i></p>
+          </div>
+          <div class="cont__grafica">
+            <div class="cont__reglas" aria-hidden="true">${rejilla()}</div>
+            <ol class="cont__cols" aria-label="Duración de cada video del tour">${columnas()}</ol>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      cols = Array.prototype.slice.call(el.querySelectorAll('.cont__col'));
+      var n = Deck.paso();
+      pasoPrevio = n;
+      irA(n, true);
+      if (Deck.quieto() || n > 0) return;
+      relojes.push(setTimeout(function () { ecualizar('es'); }, 380));
+      poner(objetivo('es').map(function () { return 0; }));
+    },
+    alPaso: function (el, n) { var atras = n < pasoPrevio; pasoPrevio = n; irA(n, atras); },
+    alSalir: function () { limpiar(); }
+  });
+})();
