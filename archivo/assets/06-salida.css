@@ -1,0 +1,124 @@
+/* 06 · Salida — texto a la izquierda; a la derecha el teléfono con los controles del tour y, a su
+   izquierda, la lupa del banner (odómetro) sobre el radar del punto de partida. */
+.diapo[data-id="salida"] .salida{display:grid;grid-template-columns:minmax(0,34fr) minmax(0,66fr);align-items:center;gap:var(--e-4)}
+.diapo[data-id="salida"] .salida__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-5);position:relative;z-index:2}
+.diapo[data-id="salida"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*3.8)}
+.diapo[data-id="salida"] .salida__lista{gap:var(--e-2)}
+.diapo[data-id="salida"] .salida__lista>li{transition:color .5s var(--ease-suave)}
+.diapo[data-id="salida"] .salida__lista>li::before{transition:background-color .5s,border-color .5s,box-shadow .5s}
+/* El estado activo del banner se marca en la lista: oro mientras se camina, olivo al llegar */
+.diapo[data-id="salida"] .salida[data-estado="sin"] li[data-e="sin"],
+.diapo[data-id="salida"] .salida[data-estado="lejos"] li[data-e="lejos"],
+.diapo[data-id="salida"] .salida[data-estado="listo"] li[data-e="listo"]{color:var(--texto)}
+.diapo[data-id="salida"] .salida[data-estado="sin"] li[data-e="sin"]::before,
+.diapo[data-id="salida"] .salida[data-estado="lejos"] li[data-e="lejos"]::before{background:var(--oro-trazo);box-shadow:0 0 0 .3em rgba(185,132,36,.22)}
+.diapo[data-id="salida"] .salida[data-estado="listo"] li[data-e="listo"]::before{background:var(--resuelto);border-color:var(--resuelto);
+  box-shadow:0 0 0 .3em color-mix(in srgb,var(--resuelto) 22%,transparent)}
+
+/* Escena */
+.diapo[data-id="salida"] .salida__escena{position:relative;height:var(--alto-util);
+  --tel:min(calc(var(--u)*19),calc(var(--alto-util)*.46))}
+.diapo[data-id="salida"] .salida__telefono-caja{position:absolute;right:calc(var(--u)*.6);top:50%;margin-top:calc(var(--tel)*-1.035)}
+.diapo[data-id="salida"] .salida__telefono{--ancho:var(--tel)}
+.diapo[data-id="salida"] .salida__lado{position:absolute;left:0;top:0;bottom:0;right:calc(var(--tel) + var(--u)*4.4);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--alto-util)*.05)}
+
+/* Lupa del banner */
+.diapo[data-id="salida"] .salida__lupa{position:relative;width:min(100%,calc(var(--alto-util)*.86));margin-top:calc(var(--alto-util)*.07)}
+.diapo[data-id="salida"] .salida__lupa-caja{position:relative;width:100%;aspect-ratio:358/72;border-radius:calc(var(--u)*1.2);overflow:hidden;
+  background:#646464;box-shadow:0 calc(var(--u)*1.2) calc(var(--u)*3) rgba(92,67,48,.32),0 0 0 1px rgba(185,132,36,.3)}
+.diapo[data-id="salida"] .salida__lupa>.esquinas{inset:calc(var(--u)*-.9);--esq-tam:calc(var(--u)*1.5)}
+.diapo[data-id="salida"] .salida__hud{position:absolute;left:0;bottom:calc(100% + var(--u)*1.5);color:var(--texto-2);display:flex;gap:1.2em}
+.diapo[data-id="salida"] .salida__estado{color:var(--texto)}
+/* Dentro de la .pantalla (px = pt de la app): las dos caras del banner, una encima de la otra */
+.diapo[data-id="salida"] .salida__cara{position:absolute;inset:0;border-radius:16px}
+.diapo[data-id="salida"] .salida__cara--camina{background:#7b7557}
+.diapo[data-id="salida"] .salida__cara--listo{background:#5a7a62;clip-path:circle(0 at 36px 50%);transition:clip-path 900ms cubic-bezier(.7,0,.2,1)}
+.diapo[data-id="salida"] .salida[data-estado="listo"] .salida__cara--listo{clip-path:circle(150% at 36px 50%)}
+.diapo[data-id="salida"] .salida__cara--listo>.icono{animation:none}
+.diapo[data-id="salida"].anim-activa .salida[data-estado="listo"] .salida__cara--listo>.icono{animation:salida-check 700ms var(--ease-expo) 250ms both}
+@keyframes salida-check{from{scale:.3;rotate:-40deg}to{scale:1;rotate:0deg}}
+.diapo[data-id="salida"] .salida__sub{position:relative;height:17px;white-space:nowrap}
+.diapo[data-id="salida"] .salida__sub>span{position:absolute;left:0;top:0;transition:opacity .45s,translate .45s}
+.diapo[data-id="salida"] .salida__sub-lejos{opacity:0;translate:0 8px}
+.diapo[data-id="salida"] .salida:not([data-estado="sin"]) .salida__sub-lejos{opacity:1;translate:0 0}
+.diapo[data-id="salida"] .salida:not([data-estado="sin"]) .salida__sub-sin{opacity:0;translate:0 -8px}
+/* Odómetro: cada columna se corre una cifra por metro */
+.diapo[data-id="salida"] .salida__rueda{display:inline-flex;vertical-align:top;font-variant-numeric:tabular-nums;color:#FFD60A;font-weight:600}
+.diapo[data-id="salida"] .salida__col{display:block;height:17px;overflow:hidden}
+.diapo[data-id="salida"] .salida__pila{display:flex;flex-direction:column;translate:0 calc(var(--k,0) * -17px);transition:translate 260ms cubic-bezier(.3,1.4,.5,1)}
+.diapo[data-id="salida"] .salida__pila--quieta{transition:none}
+.diapo[data-id="salida"] .salida__pila i{display:block;font-style:normal;height:17px;line-height:17px}
+.diapo[data-id="salida"] .salida__m-texto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+
+/* Radar del punto de partida */
+.diapo[data-id="salida"] .salida__radar{position:relative;width:min(100%,calc(var(--alto-util)*.62));aspect-ratio:1}
+.diapo[data-id="salida"] .salida__svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.diapo[data-id="salida"] .salida__reticula line{stroke:#E2D1AE;stroke-width:.3}
+.diapo[data-id="salida"] .salida__marco{fill:color-mix(in srgb,var(--bone) 55%,transparent);stroke:var(--barro-claro);stroke-width:.5}
+.diapo[data-id="salida"] .salida__marcas line{stroke:var(--barro);stroke-width:.4;opacity:.65}
+.diapo[data-id="salida"] .salida__guia-r{fill:none;stroke:#D7C29C;stroke-width:.4}
+.diapo[data-id="salida"] .salida__senda{stroke:var(--barro-claro);stroke-width:.5;stroke-dasharray:1.2 2}
+.diapo[data-id="salida"] .salida__zona-relleno{fill:var(--oro-trazo);opacity:.07;transition:fill .6s,opacity .6s}
+.diapo[data-id="salida"] .salida__zona-aro{fill:none;stroke:var(--oro-trazo);stroke-width:.9;stroke-dasharray:3 2.2;transition:stroke .6s,stroke-width .6s}
+.diapo[data-id="salida"] .salida__zona-onda{fill:none;stroke:var(--resuelto);stroke-width:1.2;opacity:0;transform-box:fill-box;transform-origin:center}
+.diapo[data-id="salida"] .salida[data-estado="listo"] .salida__zona-relleno{fill:var(--resuelto);opacity:.16}
+.diapo[data-id="salida"] .salida[data-estado="listo"] .salida__zona-aro{stroke:var(--resuelto);stroke-width:1.3;stroke-dasharray:none}
+.diapo[data-id="salida"].anim-activa .salida[data-estado="listo"]:not(.salida--fijo) .salida__zona-onda{animation:salida-onda 1100ms var(--ease-expo) both}
+@keyframes salida-onda{from{opacity:.9;transform:scale(.55)}to{opacity:0;transform:scale(1.25)}}
+.diapo[data-id="salida"] .salida__traza{stroke:var(--texto);stroke-width:1;stroke-linecap:round;opacity:.55}
+.diapo[data-id="salida"] .salida__falta{stroke:var(--oro-trazo);stroke-width:.8;stroke-dasharray:1.6 1.6}
+.diapo[data-id="salida"] .salida[data-estado="listo"] .salida__falta{stroke:var(--resuelto)}
+.diapo[data-id="salida"] .salida__inicio circle{fill:var(--app);stroke:#FBF4E4;stroke-width:1}
+.diapo[data-id="salida"] .salida__inicio path{stroke:var(--texto);stroke-width:.8;fill:none}
+.diapo[data-id="salida"] .salida__inicio .salida__bandera{fill:var(--app);stroke:none}
+.diapo[data-id="salida"] .salida__yo-punto{fill:var(--texto);stroke:#FBF4E4;stroke-width:1}
+.diapo[data-id="salida"] .salida__yo-halo{fill:rgba(185,132,36,.16);stroke:var(--oro-trazo);stroke-width:.5}
+.diapo[data-id="salida"] .salida__yo{transition:opacity .4s}
+.diapo[data-id="salida"] .salida[data-estado="sin"] .salida__yo,
+.diapo[data-id="salida"] .salida[data-estado="sin"] .salida__traza,
+.diapo[data-id="salida"] .salida[data-estado="sin"] .salida__falta,
+.diapo[data-id="salida"] .salida[data-estado="sin"] .salida__dist{opacity:0}
+.diapo[data-id="salida"] .salida__ping{fill:none;stroke:var(--oro-trazo);stroke-width:.8;opacity:0;transform-box:fill-box;transform-origin:center}
+.diapo[data-id="salida"].anim-activa .salida--ping .salida__ping{animation:salida-ping 1200ms var(--ease-expo) 2 both}
+@keyframes salida-ping{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(4.2)}}
+/* Rótulos del radar (HTML, legibles a cualquier tamaño) */
+.diapo[data-id="salida"] .salida__radar>span{position:absolute;font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.04em;
+  white-space:nowrap;line-height:1.3}
+.diapo[data-id="salida"] .salida__r20{left:50%;top:calc(50% - 54 / 220 * 100%);translate:-50% -120%;padding:.1em .45em;border-radius:3px;
+  color:#FBF4E4;background:var(--oro-hondo);transition:background-color .6s}
+.diapo[data-id="salida"] .salida[data-estado="listo"] .salida__r20{background:var(--resuelto)}
+.diapo[data-id="salida"] .salida__dist{translate:-50% -50%;padding:.1em .4em;border-radius:3px;background:var(--bone);color:var(--texto);
+  font-variant-numeric:tabular-nums;box-shadow:0 0 0 1px color-mix(in srgb,var(--oro-trazo) 50%,transparent);transition:opacity .4s}
+.diapo[data-id="salida"] .salida__etq-inicio{left:50%;top:calc(50% + 58 / 220 * 100%);translate:-50% 0;padding:.05em .4em;border-radius:3px;background:color-mix(in srgb,var(--bone) 85%,transparent);color:var(--app);font-weight:500}
+.diapo[data-id="salida"] .salida__norte{left:50%;top:4.5%;translate:-50% -140%;color:var(--texto-mute)}
+
+.modo-captura .diapo[data-id="salida"] .salida__cara--listo,
+.modo-captura .diapo[data-id="salida"] .salida__pila,
+.modo-captura .diapo[data-id="salida"] .salida__sub>span{transition:none}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="salida"] .salida__cara--listo,.diapo[data-id="salida"] .salida__pila{transition:none}
+  .diapo[data-id="salida"].anim-activa .salida__ping,.diapo[data-id="salida"].anim-activa .salida__zona-onda,
+  .diapo[data-id="salida"].anim-activa .salida__cara--listo>.icono{animation:none!important}
+}
+
+/* Vertical: titular, lupa del banner, radar, lista y el teléfono recortado (se ve el encabezado y el banner) */
+@media (orientation:portrait){
+  .diapo[data-id="salida"] .salida{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-5)}
+  .diapo[data-id="salida"] .salida__texto{display:contents}
+  .diapo[data-id="salida"] .cabeza{order:1}
+  .diapo[data-id="salida"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="salida"] .salida__escena{order:2;height:auto;display:flex;flex-direction:column;gap:var(--e-5);--tel:min(78vw,440px)}
+  .diapo[data-id="salida"] .salida__lado{position:relative;inset:auto;display:flex;gap:var(--e-6)}
+  .diapo[data-id="salida"] .salida__lupa{width:100%;margin-top:calc(var(--u)*7)}
+  .diapo[data-id="salida"] .salida__lupa-caja{border-radius:calc(var(--u)*2.4)}
+  .diapo[data-id="salida"] .salida__lupa>.esquinas{inset:calc(var(--u)*-1.6);--esq-tam:calc(var(--u)*3)}
+  .diapo[data-id="salida"] .salida__hud{bottom:calc(100% + var(--u)*2.6)}
+  .diapo[data-id="salida"] .salida__radar{width:min(100%,560px)}
+  .diapo[data-id="salida"] .salida__lista{order:3}
+  .diapo[data-id="salida"] .salida__telefono-caja{order:4;position:relative;right:auto;top:auto;margin:0 auto;height:calc(var(--tel)*.95);overflow:hidden;
+    -webkit-mask-image:linear-gradient(180deg,#000 62%,transparent);mask-image:linear-gradient(180deg,#000 62%,transparent);width:calc(var(--tel) + 12px)}
+  .diapo[data-id="salida"] .salida__telefono{margin:0 auto}
+  .diapo[data-id="salida"] .salida__escena{display:contents}
+  .diapo[data-id="salida"] .salida__lado{order:2}
+}

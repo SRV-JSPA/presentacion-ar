@@ -1,0 +1,148 @@
+/* 03 · Capa — ink. Antes y después que se arrastra. A la izquierda, «Hoy»: un montículo de barro hecho
+   de curvas de nivel apiladas como estratos ocres (Curvas.lineas), que se lee como un cerro de tierra.
+   A la derecha, «Con la app»: el modelo real del Montículo C-II-6 (Monticulo7.obj) en el visor 3D, con
+   su alambre dorado. Un divisor con manija separa las dos; se arrastra con el puntero o con las flechas
+   cuando tiene el foco. Al entrar, el divisor hace un barrido solo: cruza el cerro, deja ver el modelo
+   y se asienta al centro. En Deck.quieto() queda al 50 %. */
+(function () {
+  var el0 = null, visor = null, cancelar = null, corte = 50, arrastrando = false, relojes = [];
+
+  /* ── El cerro de hoy: estratos de curvas de nivel en vista oblicua ── */
+  function cerro() {
+    var W = 1000, H = 1000, Y0 = 300, APL = .46, DZ = 15;
+    var niveles = Curvas.lineas({ semilla: 4, montes: [{ x: .5, y: .5, rx: .29, ry: .24, h: 1, meseta: 2.1, rot: -.3 }],
+      niveles: 13, ancho: W, alto: H, ruido: .09, resolucion: 110 });
+    var N = niveles.length, h = '';
+    function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+    /* de barro hondo (base) a barro claro (cima) */
+    var A = [74, 54, 38], B = [201, 167, 124];
+    niveles.forEach(function (nv, i) {
+      var t = N > 1 ? i / (N - 1) : 0, dy = -nv.k * DZ;
+      var top = 'rgb(' + lerp(A[0], B[0], t) + ',' + lerp(A[1], B[1], t) + ',' + lerp(A[2], B[2], t) + ')';
+      var lado = 'rgb(' + lerp(A[0] * .6, B[0] * .55, t) + ',' + lerp(A[1] * .6, B[1] * .5, t) + ',' + lerp(A[2] * .6, B[2] * .45, t) + ')';
+      var d = nv.lineas.filter(function (l) { return l.length > 6; }).map(function (l) {
+        return Curvas.trazo(l.map(function (p) { return [p[0], Y0 + p[1] * APL]; }));
+      }).join('');
+      if (!d) return;
+      h += '<g class="capa__estrato" style="--i:' + i + '">' +
+        '<path class="capa__lado" d="' + d + '" transform="translate(0 ' + (dy + DZ * .95).toFixed(1) + ')" fill="' + lado + '"/>' +
+        '<path class="capa__cara" d="' + d + '" transform="translate(0 ' + dy.toFixed(1) + ')" fill="' + top + '"/></g>';
+    });
+    /* la retícula del suelo, en la misma vista */
+    var g = '';
+    for (var k = 0; k <= 10; k++) {
+      g += '<line x1="' + k * 100 + '" y1="' + Y0 + '" x2="' + k * 100 + '" y2="' + (Y0 + H * APL) + '"/>';
+      g += '<line x1="0" y1="' + (Y0 + k * 100 * APL) + '" x2="' + W + '" y2="' + (Y0 + k * 100 * APL) + '"/>';
+    }
+    return '<svg class="capa__cerro" viewBox="0 120 1000 680" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' +
+      '<defs><radialGradient id="capa-sombra"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient></defs>' +
+      '<g class="capa__suelo">' + g + '</g>' +
+      '<ellipse cx="510" cy="' + (Y0 + 520 * APL) + '" rx="360" ry="150" fill="url(#capa-sombra)"/>' + h + '</svg>';
+  }
+
+  /* ── El divisor ── */
+  function poner(p) {
+    corte = Math.max(0, Math.min(100, p));
+    if (!el0) return;
+    var m = el0.querySelector('.capa__marco');
+    m.style.setProperty('--corte', corte.toFixed(2) + '%');
+    var man = el0.querySelector('.capa__manija');
+    man.setAttribute('aria-valuenow', Math.round(corte));
+    m.classList.toggle('capa--todo-hoy', corte > 88);
+    m.classList.toggle('capa--todo-app', corte < 12);
+  }
+  function parar() { if (cancelar) { cancelar(); cancelar = null; } relojes.forEach(clearTimeout); relojes = []; }
+  function ir(hasta, ms, alFin, curva) {
+    var desde = corte;
+    cancelar = Deck.tween(ms, function (e) { poner(desde + (hasta - desde) * e); }, alFin, curva || 'suave');
+  }
+  /* barrido de entrada: cruza el cerro, enseña el modelo y vuelve al centro */
+  function barrido() {
+    parar();
+    poner(97);
+    relojes.push(setTimeout(function () {
+      ir(9, 1700, function () {
+        relojes.push(setTimeout(function () { ir(50, 1100, null, 'salida'); }, 450));
+      });
+    }, 650));
+  }
+
+  function eventos(el) {
+    var m = el.querySelector('.capa__marco'), man = el.querySelector('.capa__manija');
+    function desdeX(x) { var r = m.getBoundingClientRect(); if (r.width) poner((x - r.left) / r.width * 100); }
+    m.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      parar(); arrastrando = true; m.classList.add('capa--arrastrando');
+      try { m.setPointerCapture(e.pointerId); } catch (_) {}
+      desdeX(e.clientX); e.preventDefault();
+    });
+    m.addEventListener('pointermove', function (e) { if (arrastrando) desdeX(e.clientX); });
+    function soltar() { arrastrando = false; m.classList.remove('capa--arrastrando'); }
+    m.addEventListener('pointerup', soltar);
+    m.addEventListener('pointercancel', soltar);
+    /* con el foco en la manija, ← → mueven el divisor y no cambian de diapositiva */
+    man.addEventListener('keydown', function (e) {
+      var d = { ArrowLeft: -5, ArrowRight: 5, Home: -100, End: 100 }[e.key];
+      if (d == null) return;
+      e.preventDefault(); e.stopPropagation(); parar(); poner(corte + d);
+    });
+  }
+
+  Presentacion.diapositiva({
+    id: 'capa',
+    titulo: 'El reto',
+    seccion: 'El sitio',
+    tema: 'ink',
+    transicion: 'escaneo',
+    resumen: 'Hoy, un montículo de barro; con la app, su reconstrucción',
+    html: `
+      <div class="lienzo capa">
+        <div class="capa__texto">
+          ${Deck.cabeza('El reto', 'Un montículo de barro no cuenta su historia solo.')}
+          <p class="lead capa__lead" data-anim="subir" style="--retraso:260ms">La app pone la reconstrucción y la narración sobre lo que hoy se ve.</p>
+          <p class="capa__nota" data-anim="aparecer" style="--retraso:520ms">Arquitectura principalmente de barro · narración de la guía</p>
+        </div>
+
+        <div class="capa__escena" data-anim="escala" style="--retraso:80ms">
+          <div class="capa__marco" data-sin-deslizar style="--corte:50%">
+            <div class="capa__lado-hoy">
+              ${cerro()}
+            </div>
+            <div class="capa__lado-app">
+              <div class="capa__trama" aria-hidden="true"></div>
+              <div class="capa__visor"></div>
+              ${Motivos.esquinas()}
+              <div class="capa__hud">${Motivos.hud([['C-II-6', 'Montículo'], 'Monticulo7.obj'])}</div>
+            </div>
+            <span class="capa__rot capa__rot--hoy">Hoy</span>
+            <span class="capa__rot capa__rot--app">Con la app</span>
+            <div class="capa__divisor" aria-hidden="true"><i></i></div>
+            <button type="button" class="capa__manija" role="slider" aria-label="Comparar hoy y con la app" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+              ${Iconos.svg('chevron.left', 'capa__ch capa__ch--izq')}${Iconos.svg('chevron.left', 'capa__ch capa__ch--der')}
+            </button>
+          </div>
+          <p class="capa__ayuda">${Iconos.svg('hand.tap', 'capa__mano')}Arrastra para comparar</p>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      if (!el0) eventos(el);
+      el0 = el;
+      if (!visor) {
+        visor = Visor3D.crear(el.querySelector('.capa__visor'), {
+          modelo: 'm7', tono: 'ink', niveles: 10, giro: .55, inclinacion: .56, velocidad: .09,
+          encuadre: 1.42, desplazar: [0, -.06], grosor: 1.7, grosorCurvas: 1.2, interactivo: false
+        });
+      }
+      visor.medir();
+      if (Deck.quieto()) { parar(); poner(50); visor.final({ curvas: .22 }); return; }
+      visor.final({ curvas: .22 });
+      visor.iniciar();
+      barrido();
+    },
+    alSalir: function () {
+      parar(); arrastrando = false;
+      if (visor) { visor.detener(); visor.cancelar(); }
+    }
+  });
+})();

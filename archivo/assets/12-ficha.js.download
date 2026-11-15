@@ -1,0 +1,142 @@
+/* 12 · Ficha — bone. El teléfono en la capa RA frente a la Acrópolis: se toca Info y la hoja de la ficha
+   sube con resorte (detents .medium/.large, ARViewController.swift:369-453) con su título, la imagen
+   c_ii_4 y la descripción, que en la app es la transcripción del video unida en un párrafo
+   (VirtualGuideModuleInterface.swift:285-290). Al lado, el corte que la narración explica: el perfil
+   talud-tablero de Teotihuacán (tablero 3 : talud 1) contra el de Kaminaljuyú (1 : 1)
+   (VideoTranscripts.swift:136-151). Los perfiles se trazan, las piedras se asientan por hiladas y las
+   cotas doradas se extienden midiendo cada cuerpo. */
+(function () {
+  var visor = null;
+
+  /* Inicio literal de la narración de la Acrópolis, unido en un párrafo como lo hace la app */
+  var TEXTO = 'Acrópolis C II 4 Hallazgos y Función. La Acrópolis fue constantemente remodelada y representó el ' +
+    'sector palaciego del sitio. Los palacios se ubicaron en el núcleo de las ciudades y presentaron una ' +
+    'estructura interna sofisticada, lo que implicó diferentes usos y la existencia de espacios ' +
+    'privados. Clásico tardío, 575 a 900 d.C. Corresponde a la composición actual de la ' +
+    'Acrópolis, la cual fue utilizada como residencia para dignatarios importantes.';
+
+  /* ── El corte talud-tablero (SVG, viewBox 760×420) ── */
+  var VB = [760, 392], G = 318, H = 252;   /* suelo y alto total de cada perfil */
+  var PERFILES = [
+    { id: 'teo', ox: 26, talud: 1, tablero: 3 },
+    { id: 'kmj', ox: 404, talud: 1, tablero: 1 }
+  ];
+
+  function f(n) { return (+n).toFixed(1); }
+
+  function geometria(p) {
+    var u = H / (p.talud + p.tablero), ht = p.talud * u, hb = p.tablero * u;
+    var x0 = p.ox + 96, run = ht * .46, xt = x0 + run, xf = xt - 13, fr = 15, rc = 11, xr = p.ox + 330;
+    var yT = G - ht, yS = G - ht - hb;
+    var perfil = 'M' + f(x0) + ' ' + G + 'L' + f(xt) + ' ' + f(yT) + 'L' + f(xf) + ' ' + f(yT) + 'L' + f(xf) + ' ' + f(yT - fr) +
+      'L' + f(xf + rc) + ' ' + f(yT - fr) + 'L' + f(xf + rc) + ' ' + f(yS + fr) + 'L' + f(xf) + ' ' + f(yS + fr) +
+      'L' + f(xf) + ' ' + f(yS) + 'L' + f(xr) + ' ' + f(yS);
+    /* línea de quiebre del corte, a la derecha */
+    var quiebre = 'M' + f(xr) + ' ' + f(yS), n = 9;
+    for (var i = 1; i <= n; i++) quiebre += 'L' + f(xr + (i % 2 ? 7 : -5)) + ' ' + f(yS + (G - yS) * i / n);
+    var cuerpo = perfil + quiebre.replace(/^M[^L]+/, '') + 'L' + f(x0) + ' ' + G + 'Z';
+    return { u: u, ht: ht, hb: hb, x0: x0, xt: xt, xf: xf, xr: xr, yT: yT, yS: yS, perfil: perfil, quiebre: quiebre, cuerpo: cuerpo };
+  }
+
+  /* Piedras redondeadas, como en la lámina de la ficha; se asientan de abajo hacia arriba */
+  function piedras(p, g) {
+    var az = Deck.azar(p.id === 'teo' ? 41 : 77), h = '', fila = 0;
+    for (var y = G - 9; y > g.yS + 4; y -= 19, fila++) {
+      for (var x = g.xf - 4 + (fila % 2) * 9; x < g.xr + 4; x += 21 + az() * 8) {
+        var rx = 6 + az() * 4, ry = 4.2 + az() * 3, rot = (az() - .5) * 50;
+        var px = x + az() * 5, py = y + (az() - .5) * 5;
+        h += '<ellipse class="ficha__piedra" style="--h:' + fila + '" cx="' + f(px) + '" cy="' + f(py) + '" rx="' + f(rx) + '" ry="' + f(ry) +
+          '" transform="rotate(' + f(rot) + ' ' + f(px) + ' ' + f(py) + ')"/>';
+      }
+    }
+    return h;
+  }
+
+  function cotas(p, g) {
+    var xc = p.ox + 56, t = 5;
+    function marca(y) { return '<line x1="' + (xc - t) + '" y1="' + f(y + t) + '" x2="' + (xc + t) + '" y2="' + f(y - t) + '"/>'; }
+    return '<g class="ficha__ext">' +
+        '<line x1="' + (xc - 8) + '" y1="' + G + '" x2="' + f(g.x0 - 6) + '" y2="' + G + '"/>' +
+        '<line x1="' + (xc - 8) + '" y1="' + f(g.yT) + '" x2="' + f(g.xf - 6) + '" y2="' + f(g.yT) + '"/>' +
+        '<line x1="' + (xc - 8) + '" y1="' + f(g.yS) + '" x2="' + f(g.xf - 6) + '" y2="' + f(g.yS) + '"/>' +
+      '</g>' +
+      '<g class="ficha__cota ficha__cota--talud"><line x1="' + xc + '" y1="' + G + '" x2="' + xc + '" y2="' + f(g.yT) + '"/>' + marca(G) + marca(g.yT) + '</g>' +
+      '<g class="ficha__cota ficha__cota--tablero"><line x1="' + xc + '" y1="' + f(g.yT) + '" x2="' + xc + '" y2="' + f(g.yS) + '"/>' + marca(g.yS) + '</g>';
+  }
+
+  function pct(x, y) { return 'left:' + (x / VB[0] * 100).toFixed(2) + '%;top:' + (y / VB[1] * 100).toFixed(2) + '%'; }
+
+  function diagrama() {
+    var svg = '', html = '';
+    PERFILES.forEach(function (p, k) {
+      var g = geometria(p), xc = p.ox + 56;
+      svg += '<g class="ficha__corte ficha__corte--' + p.id + '" style="--k:' + k + '">' +
+        '<defs><clipPath id="ficha-clip-' + p.id + '"><path d="' + g.cuerpo + '"/></clipPath></defs>' +
+        '<path class="ficha__masa" d="' + g.cuerpo + '"/>' +
+        '<g class="ficha__piedras" clip-path="url(#ficha-clip-' + p.id + ')">' + piedras(p, g) + '</g>' +
+        '<g class="ficha__trazo" data-anim="dibujar" style="--retraso:' + (650 + k * 260) + 'ms;--dur-dibujar:1300ms">' +
+          '<path class="ficha__perfil" d="' + g.perfil + '"/><path class="ficha__quiebre" d="' + g.quiebre + '"/>' +
+          '<line class="ficha__suelo" x1="' + (p.ox + 4) + '" y1="' + G + '" x2="' + (p.ox + 346) + '" y2="' + G + '"/>' +
+        '</g>' +
+        cotas(p, g) +
+      '</g>';
+      /* Rótulos en HTML: legibles a cualquier tamaño */
+      html += '<span class="ficha__num ficha__num--talud ficha__num--' + p.id + '" style="' + pct(xc - 12, (G + g.yT) / 2) + '"><b>' + p.talud + '</b><i>talud</i></span>' +
+        '<span class="ficha__num ficha__num--tablero ficha__num--' + p.id + '" style="' + pct(xc - 12, (g.yT + g.yS) / 2) + '"><b>' + p.tablero + '</b><i>tablero</i></span>';
+    });
+    /* Las piezas al pie de cada corte */
+    html += '<p class="ficha__lugar ficha__lugar--teo" style="' + pct(PERFILES[0].ox + 40, G + 20) + '"><b>Teotihuacán</b><span>tablero 3 : talud 1</span></p>' +
+      '<p class="ficha__lugar ficha__lugar--kmj" style="' + pct(PERFILES[1].ox + 40, G + 20) + '"><b>Kaminaljuyú</b><span>1 : 1</span></p>';
+    return '<div class="ficha__diagrama" aria-label="Perfil talud-tablero: Teotihuacán, tablero 3 a talud 1; Kaminaljuyú, 1 a 1">' +
+      '<svg class="ficha__svg" viewBox="0 0 ' + VB[0] + ' ' + VB[1] + '" aria-hidden="true">' +
+        '<defs><pattern id="ficha-mortero" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.6" cy="1.6" r=".75"/><circle cx="5" cy="4.6" r=".55"/></pattern></defs>' +
+        svg + '</svg>' + html + '</div>';
+  }
+
+  Presentacion.diapositiva({
+    id: 'ficha',
+    titulo: 'La ficha enseña',
+    seccion: 'Realidad aumentada',
+    tema: 'bone',
+    transicion: 'estrato',
+    resumen: 'El talud-tablero: 3 : 1 contra 1 : 1',
+    html: `
+      <div class="lienzo ficha">
+        <div class="ficha__texto">
+          ${Deck.cabeza('Ficha del punto', 'La ficha explica lo que el modelo muestra.')}
+          ${diagrama()}
+          <p class="ficha__pie" data-anim="aparecer" style="--retraso:2600ms">Ejemplo: el talud-tablero, una adaptación local. Narración de la Acrópolis C-II-4.</p>
+        </div>
+
+        <div class="ficha__escena">
+          <div class="ficha__telefono-caja" data-anim="subir" style="--retraso:60ms">
+            ${KitApp.telefono(
+              KitApp.camara() +
+              '<div class="ficha__ra" aria-hidden="true"></div>' +
+              KitApp.botonesRA({ siguiente: 'fin', info: true }) +
+              '<span class="ficha__toque" aria-hidden="true"></span>' +
+              KitApp.ficha({ titulo: KitApp.TEXTOS.es.acropolis, imagen: 'img/c-ii-4.png', texto: TEXTO, alto: 452 }),
+              { clase: 'ficha__telefono', sombraClara: true })}
+          </div>
+          <div class="ficha__hud hud" aria-hidden="true" data-anim="aparecer" style="--retraso:1500ms">
+            <div><b>Info</b> · hoja .medium</div>
+            <div>texto = <i>transcripción del video</i></div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      if (!visor) {
+        visor = Visor3D.crear(el.querySelector('.ficha__ra'), {
+          modelo: 'm12', tono: 'ink', niveles: 8, giro: 2.5, inclinacion: .42, velocidad: .12,
+          encuadre: 1.25, suelo: false, interactivo: false, grosor: 1.2
+        });
+      }
+      visor.medir();
+      if (Deck.quieto()) { visor.final({ curvas: 0 }); visor.dibujar(); return; }
+      visor.final({ curvas: 0 });
+      visor.iniciar();
+    },
+    alSalir: function () { if (visor) { visor.detener(); visor.cancelar(); } }
+  });
+})();

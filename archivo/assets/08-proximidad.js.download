@@ -1,0 +1,175 @@
+/* 08 · Proximidad — bone. Un radar cenital sobre el levantamiento: el montículo C-II-6 al centro (sus
+   curvas de nivel reales, de Monticulo7.obj) y alguien que camina hacia él dejando pisadas. Su halo es la
+   precisión del GPS: cada anillo se enciende cuando el borde del halo lo toca, porque la app usa la
+   distancia efectiva = distancia − precisión (GeoUtils.swift:31-37). Pasos: 15 m, 10 m, 5 m y el
+   reinicio a más de 20 m (VirtualGuideModuleInterface.swift:62-67), que vuelve a armar los tres. */
+(function () {
+  var U = 4;              /* unidades de dibujo por metro */
+  var PREC = 3;           /* radio del halo de precisión (ilustrativo, no se rotula) */
+  var INICIO = 25.5, LIMITE_REINICIO = 20;
+  var ANILLOS = [15, 10, 5];
+  var POS = [INICIO, 17.4, 12.4, 7.4, 7.4];   /* distancia cruda del caminante en cada paso */
+
+  var el0 = null, estado = { d: INICIO, disparados: {}, fuera: false }, cancelarTween = null, relojes = [], pasoPrevio = 0;
+
+  function angulo(d) { return (208 + (INICIO - d) * 2.1) * Math.PI / 180; }  /* una espiral suave */
+  function punto(d) { var a = angulo(d); return [d * U * Math.cos(a), -d * U * Math.sin(a)]; }
+
+  /* Pisadas cada 1,3 m, alternando izquierda y derecha */
+  var PISADAS = [];
+  (function () {
+    for (var d = INICIO - .4, i = 0; d > 5; d -= 1.3, i++) {
+      var p = punto(d), q = punto(d - .2), hx = q[0] - p[0], hy = q[1] - p[1], l = Math.hypot(hx, hy) || 1;
+      var lado = i % 2 ? 1 : -1, ox = -hy / l * 1.5 * lado, oy = hx / l * 1.5 * lado;
+      PISADAS.push({ d: d, x: p[0] + ox, y: p[1] + oy, rot: Math.atan2(hy, hx) * 180 / Math.PI + 90 });
+    }
+  })();
+
+  function monticulo() {
+    var m = Modelos.m7, esc = 13.5, h = '';
+    Curvas.deModelo(m, 8).forEach(function (nv) {
+      var d = nv.lineas.map(function (l) { return Curvas.trazo(l.map(function (p) { return [p[0] * esc, p[1] * esc]; })); }).join('');
+      h += '<path d="' + d + '"/>';
+    });
+    return h;
+  }
+
+  function svgRadar() {
+    var t = '', i;
+    for (i = 0; i < 72; i++) {   /* marcas cada 5°, más largas cada 30° */
+      var a = i * 5 * Math.PI / 180, r1 = 104, r2 = i % 6 ? 101.5 : 98.5;
+      t += '<line x1="' + (r1 * Math.sin(a)).toFixed(2) + '" y1="' + (-r1 * Math.cos(a)).toFixed(2) + '" x2="' + (r2 * Math.sin(a)).toFixed(2) + '" y2="' + (-r2 * Math.cos(a)).toFixed(2) + '"/>';
+    }
+    var pis = PISADAS.map(function (p, k) {
+      return '<ellipse class="prox__pisada" data-k="' + k + '" rx="1.05" ry="1.7" transform="translate(' + p.x.toFixed(2) + ' ' + p.y.toFixed(2) + ') rotate(' + p.rot.toFixed(1) + ')"/>';
+    }).join('');
+    var anillos = ANILLOS.map(function (m) {
+      return '<g class="prox__anillo" data-m="' + m + '"><circle class="prox__brillo" r="' + m * U + '"/><circle class="prox__aro" r="' + m * U + '"/>' +
+        '<circle class="prox__onda" r="' + m * U + '"/></g>';
+    }).join('');
+    return '<svg class="prox__svg" viewBox="-110 -110 220 220" aria-hidden="true">' +
+      '<defs><clipPath id="prox-disco"><circle r="104"/></clipPath></defs>' +
+      '<g class="prox__reticula" clip-path="url(#prox-disco)">' + (function () {
+        var g = ''; for (var k = -100; k <= 100; k += 20) { g += '<line x1="' + k + '" y1="-110" x2="' + k + '" y2="110"/><line x1="-110" y1="' + k + '" x2="110" y2="' + k + '"/>'; }
+        return g; })() + '</g>' +
+      '<g class="prox__marco" data-anim="dibujar" style="--dur-dibujar:1400ms"><circle r="104"/><line x1="0" y1="-104" x2="0" y2="104"/><line x1="-104" y1="0" x2="104" y2="0"/></g>' +
+      '<g class="prox__marcas">' + t + '</g>' +
+      '<g class="prox__reinicio"><circle class="prox__brillo" r="' + LIMITE_REINICIO * U + '"/><circle class="prox__aro" r="' + LIMITE_REINICIO * U + '"/></g>' +
+      anillos +
+      '<g class="prox__monte" data-anim="dibujar" style="--retraso:300ms;--dur-dibujar:1800ms">' + monticulo() + '</g>' +
+      '<g class="prox__pisadas">' + pis + '</g>' +
+      '<g class="prox__caminante"><circle class="prox__halo" r="' + PREC * U + '"/><circle class="prox__cuerpo" r="3"/><path class="prox__rumbo" d="M-2.6 -5.2 0 -8.6 2.6 -5.2"/></g>' +
+      '</svg>';
+  }
+
+  function etiquetaAnillo(m, clase) {
+    var a = 52 * Math.PI / 180, r = m * U;   /* sobre la diagonal de arriba a la derecha */
+    var x = 50 + r * Math.cos(a) / 220 * 100, y = 50 - r * Math.sin(a) / 220 * 100;
+    return '<span class="prox__m' + (clase ? ' ' + clase : '') + '" data-m="' + m + '" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%">' + m + ' m</span>';
+  }
+
+  /* ── Estado: dónde va el caminante y qué anillos ya dispararon ── */
+  function dibujar(sinOnda) {
+    if (!el0) return;
+    var d = estado.d, ef = Math.max(0, d - Math.min(PREC, 10)), p = punto(d);
+    if (estado.dPrevio != null && Math.abs(d - estado.dPrevio) > 1e-4) estado.sale = d > estado.dPrevio;
+    estado.dPrevio = d;
+    var q = punto(estado.sale ? d + .3 : d - .3);   /* mira hacia donde camina */
+    var rumbo = Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI + 90;
+    var cam = el0.querySelector('.prox__caminante');
+    cam.setAttribute('transform', 'translate(' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + ') rotate(' + rumbo.toFixed(1) + ')');
+    /* la lógica de la app: dispara cada fase una vez; se rearma solo al pasar de 20 m efectivos */
+    if (ef > LIMITE_REINICIO) { if (!estado.fuera) { estado.disparados = {}; estado.fuera = true; } }
+    else estado.fuera = false;
+    ANILLOS.forEach(function (m) {
+      if (ef <= m && !estado.disparados[m]) { estado.disparados[m] = true; if (!sinOnda) onda(m); }
+    });
+    ANILLOS.forEach(function (m) {
+      var on = !!estado.disparados[m];
+      el0.querySelector('.prox__anillo[data-m="' + m + '"]').classList.toggle('prox__anillo--on', on);
+      var et = el0.querySelector('.prox__m[data-m="' + m + '"]'); if (et) et.classList.toggle('prox__m--on', on);
+      var li = el0.querySelector('.prox__leyenda li[data-m="' + m + '"]'); if (li) li.classList.toggle('prox__li--on', on);
+    });
+    el0.classList.toggle('prox--fuera', estado.fuera);
+    el0.classList.toggle('prox--modelo', !!estado.disparados[10]);
+    el0.querySelectorAll('.prox__pisada').forEach(function (e) {
+      e.classList.toggle('prox__pisada--on', PISADAS[+e.getAttribute('data-k')].d >= d - .05);
+    });
+    var v = el0.querySelector('.prox__ef'); if (v) v.textContent = ef.toFixed(1).replace('.', ',') + ' m';
+  }
+  function onda(m) {
+    var g = el0.querySelector('.prox__anillo[data-m="' + m + '"]');
+    g.classList.remove('prox__anillo--onda'); void g.getBoundingClientRect(); g.classList.add('prox__anillo--onda');
+  }
+  function limpiar() {
+    if (cancelarTween) { cancelarTween(); cancelarTween = null; }
+    relojes.forEach(clearTimeout); relojes = [];
+  }
+  function caminar(hasta, alFin, ritmo) {
+    var desde = estado.d, ms = Math.abs(hasta - desde) * (ritmo || 330);
+    cancelarTween = Deck.tween(ms, function (e) { estado.d = desde + (hasta - desde) * e; dibujar(); }, alFin, 'suave');
+  }
+  /* Lleva la escena al paso n. instantaneo: sin caminar (captura, regreso, movimiento reducido) */
+  function irA(n, instantaneo) {
+    limpiar();
+    el0.classList.toggle('prox--reinicio', n >= 4);
+    if (instantaneo || Deck.quieto()) {
+      estado.d = POS[n]; estado.disparados = {}; estado.fuera = false; estado.sale = false; estado.dPrevio = null;
+      ANILLOS.forEach(function (m, i) { if (n >= i + 1) estado.disparados[m] = true; });
+      dibujar(true);
+      return;
+    }
+    if (n < 4) { caminar(POS[n]); return; }
+    /* Paso 4: se aleja más de 20 m efectivos (se rearman los tres videos) y vuelve */
+    caminar(LIMITE_REINICIO + PREC + 2.2, function () {
+      relojes.push(setTimeout(function () { caminar(POS[4], null, 170); }, 650));
+    }, 150);
+  }
+
+  Presentacion.diapositiva({
+    id: 'proximidad',
+    titulo: 'Videos por distancia',
+    seccion: 'La experiencia',
+    tema: 'bone',
+    transicion: 'pliegue',
+    resumen: '15, 10 y 5 m: un video en cada anillo; reinicio a más de 20 m',
+    html: `
+      <div class="lienzo prox">
+        <div class="prox__texto">
+          ${Deck.cabeza('Proximidad', '15, 10 y 5 metros: la distancia decide el video.')}
+          <ul class="lista prox__leyenda">
+            <li data-m="15" data-paso="1"><span><b class="k">15 m</b> · Indicación de proximidad</span></li>
+            <li data-m="10" data-paso="2"><span><b class="k">10 m</b> · Punto de interés y se revela el modelo</span></li>
+            <li data-m="5" data-paso="3"><span><b class="k">5 m</b> · El video del montículo</span></li>
+            <li class="prox__li-reinicio" data-paso="4"><span><b class="k">20 m</b> · Reinicio</span></li>
+          </ul>
+          <p class="formula prox__formula" data-anim="subir" style="--retraso:420ms">${Motivos.esquinas()}<b>distancia efectiva</b> =<br>distancia − precisión del GPS <small>(máx. 10 m)</small></p>
+        </div>
+
+        <div class="prox__escena" data-anim="escala" style="--retraso:80ms">
+          <div class="prox__radar">
+            <div class="prox__terreno" aria-hidden="true" data-decorativo>${Curvas.svg({ semilla: 31, niveles: 11, ancho: 1000, alto: 1000, cuantos: 9, ruido: .12, resolucion: 90, maestra: 4, grosor: 1 })}</div>
+            ${svgRadar()}
+            ${etiquetaAnillo(20, 'prox__m--reinicio')}${etiquetaAnillo(15)}${etiquetaAnillo(10)}${etiquetaAnillo(5)}
+            <span class="prox__norte" aria-hidden="true">N</span>
+            <span class="prox__rotulo">${Motivos.rotulo('C-II-6', 'Montículo', 'rotulo--app')}</span>
+            <div class="prox__hud hud"><div><b>Distancia efectiva</b></div><div class="prox__ef">22,5 m</div></div>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      var n = Deck.paso();
+      pasoPrevio = n;
+      irA(n, true);
+      if (n === 0 && !Deck.quieto()) {
+        /* entra desde fuera del radar: unos pasos hasta el inicio */
+        estado.d = INICIO + 3; dibujar(true);
+        relojes.push(setTimeout(function () { caminar(INICIO); }, 900));
+      }
+    },
+    alPaso: function (el, n) { var atras = n < pasoPrevio; pasoPrevio = n; irA(n, atras); },
+    alSalir: function () { limpiar(); }
+  });
+})();

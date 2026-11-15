@@ -1,0 +1,112 @@
+/* 17 · Retos — ink. Cuatro tarjetas de campo que voltean en 3D, una por paso: la cara del problema
+   (carmesí) gira y muestra la solución (olivo), con el problema como subtítulo para que la captura
+   y el movimiento reducido lean las dos cosas. Cada cara lleva su pictograma de levantamiento:
+   el halo del GPS, el modelo que se corre, los montículos vecinos y el ir y venir.
+   Fuentes (notas/hechos.md, «Problemas que el código resuelve»): AppConfig.swift:43-52 y
+   GeoUtils.swift:27-37; ARSceneManager.swift:13-18; ProximityService.swift:60-65;
+   VirtualGuideModuleInterface.swift:65-67. */
+(function () {
+  /* Pictogramas (viewBox 160×90). Clases: p-l (línea), p-r (relleno), p-m (barro, el sitio), p-d (punteada) */
+  var monte = function (x, y, s, clase) {
+    s = s || 1;
+    return '<g class="p-m ' + (clase || '') + '" transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
+      '<ellipse rx="15" ry="9.5"/><ellipse rx="9.5" ry="5.8"/><ellipse rx="4.2" ry="2.4"/></g>';
+  };
+  var PICTO = [
+    { /* 1 · El GPS: halo de error grande → la precisión se resta a la distancia, con tope */
+      p: monte(124, 46) + '<circle class="p-d" cx="44" cy="46" r="30"/><circle class="p-d p-d--2" cx="44" cy="46" r="19"/>' +
+        '<circle class="p-r" cx="44" cy="46" r="4"/><circle class="p-r p-r--chico" cx="30" cy="31" r="2"/><circle class="p-r p-r--chico" cx="62" cy="58" r="2"/>' +
+        '<circle class="p-r p-r--chico" cx="27" cy="63" r="2"/><circle class="p-r p-r--chico" cx="58" cy="25" r="2"/>',
+      s: monte(124, 46) + '<circle class="p-d" cx="44" cy="46" r="17"/><circle class="p-r" cx="44" cy="46" r="4"/>' +
+        '<path class="p-l p-l--fina" d="M44 46 H61"/><path class="p-l" d="M61 46 H106"/><path class="p-l" d="M61 40 V52 M106 40 V52"/>'
+    },
+    { /* 2 · ARKit se desalinea: el modelo se corre del punto → se recoloca con cada lectura */
+      p: '<path class="p-l p-l--fina" d="M20 74 H140"/><circle class="p-r" cx="58" cy="74" r="3.5"/>' +
+        '<path class="p-l p-d" d="M58 74 L104 34"/><path class="p-r" d="M98 31 l8 2 -3 7 z"/>' +
+        '<path class="p-l" d="M92 46 l10 -16 h22 l10 16 z"/>',
+      s: '<path class="p-l p-l--fina" d="M20 74 H140"/>' +
+        '<path class="p-l" d="M64 74 l10 -18 h22 l10 18 z"/><circle class="p-r" cx="85" cy="74" r="3.5"/>' +
+        '<path class="p-l p-d" d="M85 24 V52"/><circle class="p-r" cx="85" cy="16" r="3.2"/>' +
+        '<path class="p-l p-l--fina" d="M76 9 a12 12 0 0 1 18 0"/><path class="p-l p-l--fina" d="M70 4 a20 20 0 0 1 30 0"/>'
+    },
+    { /* 3 · Montículos vecinos: todos disparan → solo el punto que toca */
+      p: monte(44, 52, .9) + monte(84, 34, .9) + monte(120, 58, .9) +
+        '<circle class="p-l" cx="44" cy="52" r="22"/><circle class="p-l" cx="84" cy="34" r="22"/><circle class="p-l" cx="120" cy="58" r="22"/>',
+      s: monte(44, 52, .9, 'p-apagado') + monte(84, 34, .9) + monte(120, 58, .9, 'p-apagado') +
+        '<circle class="p-l" cx="84" cy="34" r="22"/><circle class="p-r" cx="84" cy="34" r="3"/>'
+    },
+    { /* 4 · Ir y venir repetía el video → se rearma solo a más de 20 m */
+      p: monte(116, 52, .8) + '<circle class="p-l p-l--fina" cx="116" cy="52" r="26"/>' +
+        '<path class="p-l p-d" d="M58 52 H100"/><path class="p-r" d="M54 52 l7 -4 v8 z"/><path class="p-r" d="M104 52 l-7 -4 v8 z"/>' +
+        '<path class="p-r" d="M62 14 l9 5 -9 5 z"/><path class="p-r" d="M78 14 l9 5 -9 5 z"/><path class="p-r" d="M94 14 l9 5 -9 5 z"/>',
+      s: monte(116, 52, .8) + '<circle class="p-l p-l--fina" cx="116" cy="52" r="26"/><circle class="p-d" cx="116" cy="52" r="44"/>' +
+        '<path class="p-l" d="M8 52 H96"/><path class="p-r" d="M102 52 l-8 -4.5 v9 z"/>' +
+        '<path class="p-r" d="M78 14 l9 5 -9 5 z"/>'
+    }
+  ];
+
+  var RETOS = [
+    ['El GPS reporta de 10 a 30 m de error bajo los árboles', 'Restar la precisión a la distancia, hasta 10 m'],
+    ['ARKit se desalinea a más de 50 m', 'Recolocar el modelo con cada lectura GPS'],
+    ['Los montículos están cerca unos de otros', 'Evaluar solo el punto que toca'],
+    ['Ir y venir repetía el video', 'Reiniciar solo al alejarse más de 20 m']
+  ];
+
+  function svg(h) { return '<svg class="reto__picto" viewBox="0 0 160 90" aria-hidden="true">' + h + '</svg>'; }
+
+  function carta(r, i) {
+    var n = '0' + (i + 1);
+    return '<article class="reto" data-i="' + (i + 1) + '" data-anim="subir" style="--retraso:' + (260 + i * 110) + 'ms">' +
+      '<div class="reto__giro">' +
+        '<div class="reto__cara reto__cara--frente">' +
+          '<p class="reto__tag"><span>' + n + '</span><b>Problema</b></p>' + svg(PICTO[i].p) +
+          '<p class="reto__problema">' + r[0] + '</p>' +
+        '</div>' +
+        '<div class="reto__cara reto__cara--dorso">' +
+          '<p class="reto__tag"><span>' + n + '</span><b>Solución</b></p>' + svg(PICTO[i].s) +
+          '<p class="reto__antes">' + r[0] + '</p>' +
+          '<p class="reto__solucion" data-paso="' + (i + 1) + '">' + r[1] + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<span class="reto__sombra" aria-hidden="true"></span>' +
+    '</article>';
+  }
+
+  var relojes = [];
+  function aplicar(el, n, animar) {
+    el.querySelectorAll('.reto').forEach(function (c) {
+      var v = +c.getAttribute('data-i') <= n;
+      if (v === c.classList.contains('reto--volteada')) return;
+      c.classList.toggle('reto--volteada', v);
+      if (!animar || Deck.quieto()) return;
+      /* se levanta de la mesa mientras gira */
+      c.classList.remove('reto--alzando'); void c.offsetWidth; c.classList.add('reto--alzando');
+      relojes.push(setTimeout(function () { c.classList.remove('reto--alzando'); }, 1200));
+    });
+  }
+
+  Presentacion.diapositiva({
+    id: 'retos',
+    titulo: 'Decisiones de campo',
+    seccion: 'Ingeniería',
+    tema: 'ink',
+    transicion: 'giro',
+    resumen: 'Cuatro problemas de campo y su solución',
+    html: `
+      <div class="lienzo retos">
+        ${Deck.cabeza('Decisiones', 'Cuatro problemas de campo y cómo se resolvieron.')}
+        <div class="retos__mesa">${RETOS.map(carta).join('')}</div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el.classList.add('retos--sin-giro');           /* al entrar, cada tarjeta ya está en su cara */
+      aplicar(el, Deck.paso(), false);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('retos--sin-giro'); }); });
+    },
+    alPaso: function (el, n) { aplicar(el, n, true); },
+    alSalir: function (el) {
+      relojes.forEach(clearTimeout); relojes = [];
+      el.querySelectorAll('.reto--alzando').forEach(function (c) { c.classList.remove('reto--alzando'); });
+    }
+  });
+})();

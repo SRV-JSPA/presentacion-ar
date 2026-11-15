@@ -1,0 +1,298 @@
+/* 02 · Sitio — bone. El levantamiento del sitio prehispánico: 230 puntos, uno por montículo, dentro
+   del contorno de los 5 km² (distribución ilustrativa, con azar repetible). Al entrar se «levantan»
+   en una onda desde el centro y el contador sube a 230+. Paso 1: la ciudad avanza en diagonal como
+   una retícula de manzanas; cada montículo que alcanza se apaga con un destello carmesí y queda su
+   marca (el contador baja a 40). Paso 2: el contorno del parque se traza en oro y una traza dorada
+   une los 9 que se resguardan ahí. Cifras: narración «Datos arqueológicos» (VideoTranscripts.swift:31-67). */
+(function () {
+  var TOTAL = 230, QUEDAN = 40, PARQUE = 9;
+
+  /* ── Geometría en coordenadas 0…1 del mapa cuadrado ── */
+  function blob(cx, cy, r, sem, n, amp) {
+    var al = Deck.azar(sem), fases = [al() * 6.28, al() * 6.28, al() * 6.28], pts = [];
+    for (var i = 0; i < n; i++) {
+      var a = i / n * Math.PI * 2;
+      var k = 1 + amp * (Math.sin(a * 2 + fases[0]) * .55 + Math.sin(a * 3 + fases[1]) * .3 + Math.sin(a * 5 + fases[2]) * .15);
+      pts.push([cx + Math.cos(a) * r * k, cy + Math.sin(a) * r * k * .92]);
+    }
+    return pts;
+  }
+  function dentro(p, poli) {
+    var c = false;
+    for (var i = 0, j = poli.length - 1; i < poli.length; j = i++) {
+      var a = poli[i], b = poli[j];
+      if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
+  }
+  var SITIO = blob(.5, .5, .41, 7, 72, .14);
+  var PARQ = blob(.37, .63, .085, 19, 40, .12);
+  var PARQ_HOLGURA = blob(.37, .63, .1, 19, 40, .12), PARQ_CLARO = blob(.37, .63, .118, 19, 40, .12);
+  var DIR = [-.7071, .7071];   /* la ciudad avanza desde arriba a la derecha hacia abajo a la izquierda */
+
+  var PUNTOS = (function () {
+    var al = Deck.azar(2026), pts = [], intentos = 0;
+    function lejos(x, y, d) { for (var i = 0; i < pts.length; i++) { if (Math.hypot(pts[i].x - x, pts[i].y - y) < d) return false; } return true; }
+    /* primero los 9 del parque */
+    while (pts.length < PARQUE && intentos < 5000) {
+      intentos++;
+      var x = .37 + (al() - .5) * .17, y = .63 + (al() - .5) * .16;
+      if (dentro([x, y], PARQ) && Math.hypot(x - .37, y - .63) < .066 && lejos(x, y, .036)) pts.push({ x: x, y: y, parque: true, queda: true });
+    }
+    intentos = 0;
+    while (pts.length < TOTAL && intentos < 60000) {
+      intentos++;
+      var x2 = .07 + al() * .86, y2 = .07 + al() * .86;
+      if (!dentro([x2, y2], SITIO) || dentro([x2, y2], PARQ_HOLGURA)) continue;
+      if (lejos(x2, y2, .031)) pts.push({ x: x2, y: y2, parque: false, queda: false });
+    }
+    /* 31 más se conservan fuera del parque, repartidos */
+    var fuera = pts.filter(function (p) { return !p.parque; }), elegidos = 0, al2 = Deck.azar(40);
+    while (elegidos < QUEDAN - PARQUE) {
+      var p = fuera[Math.floor(al2() * fuera.length)];
+      if (!p.queda) { p.queda = true; elegidos++; }
+    }
+    /* cuándo los alcanza cada cosa */
+    pts.forEach(function (p, i) {
+      p.d = Math.hypot(p.x - .5, p.y - .5);                       /* onda de entrada desde el centro */
+      p.f = ((p.x - .5) * DIR[0] + (p.y - .5) * DIR[1]) / .62 * .5 + .5;   /* frente de la ciudad, 0…1 */
+      p.f = Math.max(0, Math.min(1, p.f));
+      p.j = al();
+    });
+    return pts;
+  })();
+
+  /* Manzanas de la ciudad: retícula girada; se omiten en el parque y alrededor de lo que se conserva */
+  var MANZANAS = (function () {
+    var m = [], paso = .046, ang = -.21, c = Math.cos(ang), s = Math.sin(ang), al = Deck.azar(77);
+    for (var i = -14; i <= 14; i++) for (var j = -14; j <= 14; j++) {
+      var u = i * paso, v = j * paso, x = .5 + u * c - v * s, y = .5 + u * s + v * c;
+      if (x < -.05 || x > 1.05 || y < -.05 || y > 1.05) continue;
+      if (dentro([x, y], PARQ_CLARO)) continue;
+      var cerca = PUNTOS.some(function (p) { return p.queda && Math.hypot(p.x - x, p.y - y) < .028; });
+      if (cerca) continue;
+      var f = ((x - .5) * DIR[0] + (y - .5) * DIR[1]) / .62 * .5 + .5;
+      m.push({ x: x, y: y, f: Math.max(0, Math.min(1, f)), w: paso * (.5 + al() * .22), h: paso * (.46 + al() * .26) });
+    }
+    return m;
+  })();
+
+  /* Traza dorada que une los 9 del parque (vecino más cercano desde el de más arriba) */
+  var TRAZA = (function () {
+    var pq = PUNTOS.filter(function (p) { return p.parque; }).slice();
+    pq.sort(function (a, b) { return a.y - b.y; });
+    var orden = [pq.shift()];
+    while (pq.length) {
+      var u = orden[orden.length - 1], k = 0, mejor = 9;
+      pq.forEach(function (p, i) { var d = Math.hypot(p.x - u.x, p.y - u.y); if (d < mejor) { mejor = d; k = i; } });
+      orden.push(pq.splice(k, 1)[0]);
+    }
+    return orden;
+  })();
+
+  /* ── Estado y dibujo ── */
+  var el0 = null, lz = null, col = {}, est = { ent: 1, dem: 0, par: 0 }, cancelar = [], pasoPrevio = 0;
+
+  function colores(el) {
+    var cs = getComputedStyle(el);
+    function v(n) { return cs.getPropertyValue(n).trim(); }
+    col = { barro: v('--barro'), hondo: v('--barro-hondo'), claro: v('--barro-claro'), carmesi: v('--problema'),
+      oro: v('--oro-trazo'), oroH: v('--oro-hondo'), texto: v('--texto'), trama: v('--trama-color'), bone3: v('--bone-3') };
+  }
+  function suave(t) { return t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t); }
+  function camino(ctx, poli, S, hasta) {
+    var n = poli.length, lim = hasta == null ? n : Math.floor(hasta * n);
+    ctx.beginPath();
+    for (var i = 0; i <= lim; i++) { var p = poli[i % n]; if (i) ctx.lineTo(p[0] * S, p[1] * S); else ctx.moveTo(p[0] * S, p[1] * S); }
+  }
+
+  function dibujar() {
+    if (!lz || !lz.ancho) return;
+    var ctx = lz.ctx, S = Math.min(lz.ancho, lz.alto), r = S * .0068, i;
+    ctx.clearRect(0, 0, lz.ancho, lz.alto);
+    var frente = est.dem * 1.25 - .12;   /* posición del frente (0…1 con margen) */
+
+    /* retícula del levantamiento */
+    ctx.strokeStyle = col.trama; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (i = 1; i < 10; i++) { ctx.moveTo(i / 10 * S, 0); ctx.lineTo(i / 10 * S, S); ctx.moveTo(0, i / 10 * S); ctx.lineTo(S, i / 10 * S); }
+    ctx.stroke();
+
+    /* la ciudad: manzanas que aparecen detrás del frente */
+    if (est.dem > 0) {
+      MANZANAS.forEach(function (m) {
+        var a = suave((frente - m.f) / .09);
+        if (a <= 0) return;
+        ctx.globalAlpha = a * .5;
+        ctx.fillStyle = col.bone3; ctx.strokeStyle = col.claro; ctx.lineWidth = .6;
+        ctx.save(); ctx.translate(m.x * S, m.y * S); ctx.rotate(-.21);
+        ctx.fillRect(-m.w * S / 2, -m.h * S / 2, m.w * S, m.h * S);
+        ctx.strokeRect(-m.w * S / 2, -m.h * S / 2, m.w * S, m.h * S);
+        ctx.restore();
+      });
+      ctx.globalAlpha = 1;
+      /* la línea del frente, mientras avanza */
+      if (est.dem < 1) {
+        var fa = Math.sin(Math.min(1, est.dem) * Math.PI);
+        var cx = .5 + (frente - .5) * .62 * 2 * DIR[0] / 1, cy = .5 + (frente - .5) * .62 * 2 * DIR[1] / 1;
+        ctx.save(); ctx.globalAlpha = .55 * fa; ctx.strokeStyle = col.carmesi; ctx.lineWidth = 1.4; ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.moveTo((cx - DIR[1]) * S, (cy + DIR[0]) * S); ctx.lineTo((cx + DIR[1]) * S, (cy - DIR[0]) * S); ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    /* contorno del sitio (5 km²) */
+    ctx.save(); ctx.strokeStyle = col.barro; ctx.lineWidth = 1.3; ctx.setLineDash([2, 5]); ctx.lineCap = 'round';
+    camino(ctx, SITIO, S); ctx.stroke(); ctx.restore();
+
+    /* contorno del parque: barro tenue; con el paso 2 se traza en oro */
+    ctx.save(); ctx.lineWidth = 1.2; ctx.strokeStyle = col.claro; ctx.setLineDash([3, 4]);
+    camino(ctx, PARQ, S); ctx.stroke(); ctx.restore();
+    if (est.par > 0) {
+      ctx.save(); ctx.fillStyle = col.oro; ctx.globalAlpha = .09 * suave(est.par * 1.5);
+      camino(ctx, PARQ, S); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.lineWidth = 2.2; ctx.strokeStyle = col.oro; ctx.lineJoin = 'round';
+      camino(ctx, PARQ, S, Math.min(1, est.par * 1.4)); ctx.stroke(); ctx.restore();
+    }
+
+    /* la traza dorada que junta los 9 */
+    var tr = suave((est.par - .35) / .65);
+    if (tr > 0) {
+      ctx.save(); ctx.strokeStyle = col.oro; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      var seg = (TRAZA.length - 1) * tr;
+      ctx.beginPath(); ctx.moveTo(TRAZA[0].x * S, TRAZA[0].y * S);
+      for (i = 1; i <= Math.ceil(seg); i++) {
+        var a0 = TRAZA[i - 1], a1 = TRAZA[i], q = Math.min(1, seg - (i - 1));
+        ctx.lineTo((a0.x + (a1.x - a0.x) * q) * S, (a0.y + (a1.y - a0.y) * q) * S);
+      }
+      ctx.stroke(); ctx.restore();
+    }
+
+    /* los montículos */
+    PUNTOS.forEach(function (p) {
+      var x = p.x * S, y = p.y * S;
+      var e = suave((est.ent * 1.35 - p.d * 1.6 - p.j * .08) / .22);   /* onda de entrada */
+      if (e <= 0) return;
+      var golpe = p.queda ? 0 : (frente - p.f) / .07;                      /* >0: la ciudad ya pasó */
+      if (golpe > 0 && est.dem > 0) {
+        var g = Math.min(1, golpe);
+        /* destello: un aro carmesí que se abre y se va */
+        if (golpe < 3) {
+          var h = golpe / 3;
+          ctx.globalAlpha = (1 - h) * .85; ctx.strokeStyle = col.carmesi; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(x, y, r * (1.2 + h * 3.2), 0, 7); ctx.stroke();
+        }
+        /* lo que queda: una marca carmesí tenue */
+        ctx.globalAlpha = .42 + .45 * (1 - g); ctx.strokeStyle = col.carmesi; ctx.lineWidth = 1.4;
+        var k = r * .78;
+        ctx.beginPath(); ctx.moveTo(x - k, y - k); ctx.lineTo(x + k, y + k); ctx.moveTo(x + k, y - k); ctx.lineTo(x - k, y + k); ctx.stroke();
+        ctx.globalAlpha = 1;
+        return;
+      }
+      var oro = p.parque ? suave((est.par - .2) / .5) : 0;
+      ctx.globalAlpha = e;
+      if (oro > 0) {
+        ctx.fillStyle = col.oro; ctx.globalAlpha = e * .22 * oro;
+        ctx.beginPath(); ctx.arc(x, y, r * 2.6, 0, 7); ctx.fill();
+        ctx.globalAlpha = e;
+      }
+      var esc = .4 + .6 * e + (e < 1 ? Math.sin(e * Math.PI) * .5 : 0);
+      ctx.fillStyle = oro > .5 ? col.oro : (p.queda && est.dem >= 1 ? col.hondo : col.barro);
+      ctx.beginPath(); ctx.arc(x, y, r * esc * (1 + oro * .25), 0, 7); ctx.fill();
+      ctx.strokeStyle = oro > .5 ? col.oro : col.barro; ctx.lineWidth = 1;
+      ctx.globalAlpha = e * .55;
+      ctx.beginPath(); ctx.arc(x, y, r * esc * 1.85, 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+
+    contadores();
+  }
+
+  /* ── Contadores ── */
+  function contadores() {
+    if (!el0) return;
+    var vivos = 0;
+    var frente = est.dem * 1.25 - .12;
+    PUNTOS.forEach(function (p, i) {
+      var e = est.ent * 1.35 - p.d * 1.6 - p.j * .08;
+      if (e <= 0) return;
+      if (!p.queda && est.dem > 0 && frente - p.f > 0) return;
+      vivos++;
+    });
+    var n = el0.querySelector('.sitio__n'), mas = el0.querySelector('.sitio__mas');
+    if (n) n.textContent = vivos;
+    if (mas) mas.style.opacity = vivos === TOTAL && est.dem === 0 ? 1 : 0;
+    el0.classList.toggle('sitio--perdida', est.dem > 0);
+    el0.classList.toggle('sitio--parque', est.par > .3);
+  }
+
+  /* ── Pasos ── */
+  function limpiar() { cancelar.forEach(function (c) { c(); }); cancelar = []; }
+  function animar(campo, hasta, ms, curva) {
+    var desde = est[campo];
+    cancelar.push(Deck.tween(ms, function (e) { est[campo] = desde + (hasta - desde) * e; dibujar(); }, null, curva || 'suave'));
+  }
+  function irA(n, instantaneo) {
+    limpiar();
+    var meta = { ent: 1, dem: n >= 1 ? 1 : 0, par: n >= 2 ? 1 : 0 };
+    if (instantaneo || Deck.quieto()) { est = meta; dibujar(); return; }
+    if (est.dem !== meta.dem) animar('dem', meta.dem, meta.dem ? 2600 : 500, meta.dem ? 'lineal' : 'salida');
+    if (est.par !== meta.par) animar('par', meta.par, meta.par ? 1700 : 400, 'salida');
+  }
+
+  Presentacion.diapositiva({
+    id: 'sitio',
+    titulo: 'Lo que queda del sitio',
+    seccion: 'El sitio',
+    tema: 'bone',
+    transicion: 'plano',
+    resumen: 'Más de 230 montículos; hoy se conservan 40',
+    html: `
+      <div class="lienzo sitio">
+        <div class="sitio__texto">
+          ${Deck.cabeza('El sitio', 'Más de 230 montículos. Hoy se conservan 40.')}
+          <ul class="lista sitio__lista">
+            <li class="sitio__li sitio__li--todos" data-anim="subir" style="--retraso:300ms"><span><b class="k">230+</b> montículos en <b class="k">5 km²</b></span></li>
+            <li class="sitio__li sitio__li--perdidos" data-paso="1"><span>La mayoría, demolidos por la expansión urbana</span></li>
+            <li class="sitio__li sitio__li--parque" data-paso="2"><span><b class="k">40</b> se conservan · <b class="k">9</b> dentro del parque</span></li>
+          </ul>
+          ${Deck.fuente('Según la narración «Datos arqueológicos» de la guía virtual de la app.')}
+        </div>
+
+        <div class="sitio__escena">
+          <div class="sitio__mapa" data-anim="aparecer" style="--retraso:60ms">
+            <canvas class="sitio__lienzo" aria-hidden="true"></canvas>
+            <span class="sitio__km">Sitio prehispánico · 5 km²</span>
+            <span class="sitio__parque-et">Parque</span>
+            <div class="sitio__hud">
+              <div class="sitio__cont">
+                <span class="sitio__cont-et">Montículos</span>
+                <span class="sitio__cifra"><span class="sitio__n">230</span><span class="sitio__mas">+</span></span>
+              </div>
+              <div class="sitio__cont sitio__cont--parque" data-paso="2">
+                <span class="sitio__cont-et">En el parque</span>
+                <span class="sitio__cifra">9</span>
+              </div>
+            </div>
+            <span class="sitio__nota">Distribución ilustrativa</span>
+          </div>
+        </div>
+      </div>
+    `,
+    alEntrar: function (el) {
+      el0 = el;
+      colores(el);
+      if (!lz) lz = Deck.lienzo(el.querySelector('.sitio__lienzo'), function () { dibujar(); });
+      lz.medir();
+      var n = Deck.paso();
+      pasoPrevio = n;
+      irA(n, true);
+      if (n === 0 && !Deck.quieto()) {
+        est.ent = 0; dibujar();
+        cancelar.push(Deck.tween(1900, function (e) { est.ent = e; dibujar(); }, null, 'lineal'));
+      }
+    },
+    alPaso: function (el, n) { var atras = n < pasoPrevio; pasoPrevio = n; irA(n, atras); },
+    alSalir: function () { limpiar(); }
+  });
+})();

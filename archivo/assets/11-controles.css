@@ -1,0 +1,97 @@
+/* 11 · Controles — titular y los tres candados a la izquierda; a la derecha el teléfono en la capa RA y,
+   a su izquierda, la lupa de la tarjeta Info + Next con la lectura de su opacidad y sus tres íconos. */
+.diapo[data-id="controles"] .ctl{display:grid;grid-template-columns:minmax(0,36fr) minmax(0,64fr);align-items:center;gap:var(--e-4)}
+.diapo[data-id="controles"] .ctl__texto{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-6);position:relative;z-index:2}
+.diapo[data-id="controles"] .cabeza .titular{max-width:13ch;font-size:calc(var(--u)*3.7)}
+
+/* Candados: cerrados en gris; abiertos en olivo (condición cumplida), unidos por una traza */
+.diapo[data-id="controles"] .ctl__candados{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e-3);position:relative}
+.diapo[data-id="controles"] .ctl__candados::before{content:'';position:absolute;left:calc(var(--u)*1.55);top:calc(var(--u)*1.6);bottom:calc(var(--u)*1.6);width:1px;
+  background:linear-gradient(var(--linea),var(--linea))}
+.diapo[data-id="controles"] .ctl__candado{position:relative;display:flex;align-items:center;gap:var(--e-3);font-size:var(--t-lead);line-height:1.3;font-weight:500;
+  color:var(--texto-mute);transition:color .5s var(--ease-suave)}
+.diapo[data-id="controles"] .ctl__paso{position:absolute;width:0;height:0;overflow:hidden}
+.diapo[data-id="controles"] .ctl__lock{position:relative;flex:none;display:grid;place-items:center;width:calc(var(--u)*3.1);height:calc(var(--u)*3.1);border-radius:50%;
+  background:var(--ink,#1A1A1A);border:1px solid color-mix(in srgb,var(--texto) 22%,transparent);font-size:calc(var(--u)*1.55);color:var(--texto-mute);
+  transition:background-color .5s,border-color .5s,color .5s,box-shadow .5s}
+.diapo[data-id="controles"] .ctl__lock .icono{position:absolute;transition:opacity .35s}
+.diapo[data-id="controles"] .ctl__lock-a{opacity:0}
+.diapo[data-id="controles"] .ctl__candado--abierto{color:var(--texto)}
+.diapo[data-id="controles"] .ctl__candado--abierto .ctl__lock{color:var(--resuelto);border-color:var(--resuelto);
+  background:color-mix(in srgb,var(--resuelto) 16%,#1A1A1A);box-shadow:0 0 0 calc(var(--u)*.45) color-mix(in srgb,var(--resuelto) 14%,transparent)}
+.diapo[data-id="controles"] .ctl__candado--abierto .ctl__lock-c{opacity:0}
+.diapo[data-id="controles"] .ctl__candado--abierto .ctl__lock-a{opacity:1}
+.diapo[data-id="controles"].anim-activa .ctl__candado--abierto .ctl__lock-a{animation:ctl-abrir 700ms var(--ease-expo) both}
+@keyframes ctl-abrir{0%{translate:0 .12em;rotate:0deg;scale:.9}45%{translate:0 -.14em;rotate:-14deg;scale:1.12}100%{translate:0 0;rotate:0deg;scale:1}}
+
+/* Escena */
+.diapo[data-id="controles"] .ctl__escena{position:relative;height:var(--alto-util);
+  --tel:min(calc(var(--u)*19.5),calc(var(--alto-util)*.47));--lupa-h:calc(var(--alto-util)*.5)}
+.diapo[data-id="controles"] .ctl__telefono-caja{position:absolute;right:calc(var(--u)*.6);top:50%;margin-top:calc(var(--tel)*-1.035)}
+.diapo[data-id="controles"] .ctl__telefono{--ancho:var(--tel)}
+.diapo[data-id="controles"] .ctl__lado{position:absolute;left:0;top:0;bottom:0;right:calc(var(--tel) + var(--u)*4);
+  display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*3.6)}
+
+/* Lupa de la tarjeta derecha, sobre la cámara */
+.diapo[data-id="controles"] .ctl__lupa{position:relative;flex:none;height:var(--lupa-h);aspect-ratio:112/180;margin-top:calc(var(--alto-util)*-.16)}
+.diapo[data-id="controles"] .ctl__lupa-caja{position:absolute;inset:0;border-radius:calc(var(--lupa-h)*.1);overflow:hidden;
+  background:linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.2)),url(../img/parque-menu.jpg) 40% 30%/260% auto;
+  box-shadow:0 calc(var(--u)*1.4) calc(var(--u)*3.6) rgba(0,0,0,.55),0 0 0 1px rgba(230,186,98,.3);transition:box-shadow .6s}
+.diapo[data-id="controles"] .ctl__lupa>.esquinas{inset:calc(var(--u)*-1);--esq-tam:calc(var(--u)*1.7)}
+.diapo[data-id="controles"] .ctl__lupa-app .app-ra__tarjeta--izq{display:none}
+.diapo[data-id="controles"] .ctl__lupa-app .app-ra__tarjeta--der{top:16px;right:16px}
+.diapo[data-id="controles"] .ctl__lupa-app .app-ra__boton--siguiente .icono{transition:scale .4s}
+.diapo[data-id="controles"].anim-activa .ctl__lupa-app .app-ra__boton--siguiente .icono{animation:ctl-icono 520ms var(--ease-expo) both}
+@keyframes ctl-icono{from{scale:.4;rotate:-90deg;opacity:0}to{scale:1;rotate:0deg;opacity:1}}
+.diapo[data-id="controles"] .ctl--libre .ctl__lupa-caja{box-shadow:0 calc(var(--u)*1.4) calc(var(--u)*3.6) rgba(0,0,0,.55),0 0 0 2px var(--resuelto),
+  0 0 calc(var(--u)*3) color-mix(in srgb,var(--resuelto) 35%,transparent)}
+/* El toque que coloca el modelo */
+.diapo[data-id="controles"] .ctl__onda{position:absolute;left:50%;top:31.1%;width:44%;aspect-ratio:1;translate:-50% -50%;border-radius:50%;
+  border:2px solid #fff;opacity:0;pointer-events:none}
+.diapo[data-id="controles"].anim-activa .ctl--toque .ctl__onda{animation:ctl-toque 650ms var(--ease-expo) both}
+@keyframes ctl-toque{0%{opacity:0;scale:.4;background:rgba(255,255,255,.35)}25%{opacity:1}100%{opacity:0;scale:1.6;background:rgba(255,255,255,0)}}
+
+/* Lectura de la opacidad e íconos del botón */
+.diapo[data-id="controles"] .ctl__lectura{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e-2);min-width:0}
+.diapo[data-id="controles"] .ctl__lectura-t{margin:0}
+.diapo[data-id="controles"] .ctl__lectura-n{margin:0 0 var(--e-3);font-family:var(--f-mono);font-weight:500;font-size:calc(var(--u)*5.2);line-height:1;letter-spacing:-.04em;
+  color:var(--texto-mute);font-variant-numeric:tabular-nums;transition:color .5s}
+.diapo[data-id="controles"] .ctl__lectura-n small{font-size:.42em;margin-left:.12em;letter-spacing:0}
+.diapo[data-id="controles"] .ctl--libre .ctl__lectura-n{color:var(--resuelto)}
+.diapo[data-id="controles"] .ctl__iconos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e-2);position:relative}
+.diapo[data-id="controles"] .ctl__iconos::before{content:'';position:absolute;left:calc(var(--u)*1.15);top:calc(var(--u)*1.2);bottom:calc(var(--u)*1.2);width:1px;
+  background:color-mix(in srgb,var(--app) 45%,transparent)}
+.diapo[data-id="controles"] .ctl__iconos li{position:relative;display:flex;align-items:center;gap:var(--e-2);font-size:var(--t-texto);color:var(--texto-mute);
+  white-space:nowrap;opacity:.5;transition:opacity .5s,color .5s}
+.diapo[data-id="controles"] .ctl__ic{flex:none;display:grid;place-items:center;width:calc(var(--u)*2.3);height:calc(var(--u)*2.3);border-radius:50%;
+  background:#E8C294;border:max(1.5px,calc(var(--u)*.1)) solid rgba(191,97,26,.6);color:#BF611A;font-size:calc(var(--u)*1.05);transition:box-shadow .5s,scale .5s}
+.diapo[data-id="controles"] .ctl[data-icono="play"] li[data-icono="play"],
+.diapo[data-id="controles"] .ctl[data-icono="siguiente"] li[data-icono="siguiente"]{opacity:1;color:var(--texto)}
+.diapo[data-id="controles"] .ctl[data-icono="play"] li[data-icono="play"] .ctl__ic,
+.diapo[data-id="controles"] .ctl[data-icono="siguiente"] li[data-icono="siguiente"] .ctl__ic{scale:1.12;box-shadow:0 0 0 calc(var(--u)*.4) rgba(209,91,51,.25)}
+
+.modo-captura .diapo[data-id="controles"] .ctl__lock-a,.modo-captura .diapo[data-id="controles"] .ctl__onda,
+.modo-captura .diapo[data-id="controles"] .ctl__lupa-app .app-ra__boton--siguiente .icono{animation:none!important}
+@media (prefers-reduced-motion:reduce){
+  .diapo[data-id="controles"].anim-activa .ctl__candado--abierto .ctl__lock-a,.diapo[data-id="controles"].anim-activa .ctl--toque .ctl__onda,
+  .diapo[data-id="controles"].anim-activa .ctl__lupa-app .app-ra__boton--siguiente .icono{animation:none!important}
+}
+
+/* Vertical: titular, candados, lupa con la lectura, y el teléfono recortado arriba (se ven sus tarjetas) */
+@media (orientation:portrait){
+  .diapo[data-id="controles"] .ctl{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:var(--e-6)}
+  .diapo[data-id="controles"] .ctl__texto{gap:var(--e-5)}
+  .diapo[data-id="controles"] .cabeza .titular{max-width:none;font-size:var(--t-1)}
+  .diapo[data-id="controles"] .ctl__escena{height:auto;display:flex;flex-direction:column;gap:var(--e-6);--tel:min(78vw,440px);--lupa-h:min(64vw,calc(var(--u)*60))}
+  .diapo[data-id="controles"] .ctl__lado{position:relative;inset:auto;justify-content:flex-start;gap:var(--e-5);padding-top:calc(var(--u)*2)}
+  .diapo[data-id="controles"] .ctl__lupa{margin:0 0 0 calc(var(--u)*2)}
+  .diapo[data-id="controles"] .ctl__lectura-n{font-size:calc(var(--u)*9)}
+  .diapo[data-id="controles"] .ctl__iconos li{white-space:normal}
+  .diapo[data-id="controles"] .ctl__ic{width:calc(var(--u)*5.4);height:calc(var(--u)*5.4);font-size:calc(var(--u)*2.5)}
+  .diapo[data-id="controles"] .ctl__iconos::before{left:calc(var(--u)*2.7)}
+  .diapo[data-id="controles"] .ctl__lock{width:calc(var(--u)*7);height:calc(var(--u)*7);font-size:calc(var(--u)*3.4)}
+  .diapo[data-id="controles"] .ctl__candados::before{left:calc(var(--u)*3.5);top:calc(var(--u)*3.5);bottom:calc(var(--u)*3.5)}
+  .diapo[data-id="controles"] .ctl__telefono-caja{position:relative;right:auto;top:auto;margin:0 auto;height:calc(var(--tel)*.8);overflow:hidden;
+    -webkit-mask-image:linear-gradient(180deg,#000 60%,transparent);mask-image:linear-gradient(180deg,#000 60%,transparent);width:calc(var(--tel) + 12px)}
+  .diapo[data-id="controles"] .ctl__telefono{margin:0 auto}
+}
