@@ -1,0 +1,192 @@
+# Blender 3.5.1 MTL File: 'None'
+# www.blender.org
+
+newmtl Bamboo_Fence
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/fondo-textura-madera-abstracta_23-2148931508.png
+
+newmtl Bamboo_wall.001
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/red_plaster_weathered_diff_4k.jpg
+
+newmtl Material.037
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.038
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.039
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.040
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/reed_roof_03_diff_4k.jpg
+
+newmtl Material.041
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.042
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.043
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.044
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.045
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.046
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.047
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.048
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.058
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.059
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.060
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.061
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg
+
+newmtl Material.062
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 1
+map_Kd C:/Users/15-4JO/Downloads/Megaproyect/Megaproyect/ColoBase.jpeg

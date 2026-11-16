@@ -1,7 +1,7 @@
-/* 01 · Portada — ink. La Acrópolis real (Monticulo12.obj) en el visor 3D: entra como curvas de nivel
+/* 01 · Portada — ink. El Montículo 3 real (Monticulo3.obj) en el visor 3D: entra como curvas de nivel
    en el suelo, la línea de escaneo dorada la levanta y queda sólida con su alambre, girando lento.
    La barra dorada bajo «Kaminaljuyú» (la del splash de la app) se llena al ritmo del escaneo.
-   La retícula de cámara enmarca el modelo con las lecturas del guion. La misma Acrópolis cierra en la 19. */
+   La retícula de cámara enmarca el modelo con las lecturas del guion. (Antes era la Acrópolis, Monticulo12.obj, que sigue cerrando en la 19.) */
 (function () {
   var visor = null;
 
@@ -21,10 +21,10 @@
               ${Motivos.hud([['Parque', 'N 14.6313 · O 90.5485']])}
             </div>
             <div class="portada__hud portada__hud--rotulo" data-anim="escala" style="--retraso:4500ms">
-              ${Motivos.rotulo('C-II-4', 'Acrópolis', 'rotulo--oro')}
+              ${Motivos.rotulo('C-II-3', 'Montículo', 'rotulo--oro')}
             </div>
             <div class="portada__hud portada__hud--obj" data-anim="aparecer" style="--retraso:2200ms">
-              ${Motivos.hud(['Monticulo12.obj · <i>1 746</i> vértices'])}
+              ${Motivos.hud(['Monticulo3.obj · <i>2 628</i> vértices'])}
             </div>
           </div>
         </div>
@@ -44,7 +44,7 @@
     alEntrar: function (el) {
       if (!visor) {
         visor = Visor3D.crear(el.querySelector('.portada__visor'), {
-          modelo: 'm12', tono: 'ink', niveles: 14, giro: 2.35, inclinacion: .5, velocidad: .1,
+          modelo: 'm3', tono: 'ink', niveles: 14, giro: .8, inclinacion: .5, velocidad: .1,
           encuadre: 1.18, desplazar: [.05, .03], grosor: 1.6, grosorCurvas: 1.4,
           /* en pantallas táctiles, deslizar sobre el modelo cambia de diapositiva: no se gira con el dedo */
           interactivo: !(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches)

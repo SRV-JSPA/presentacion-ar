@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════════════════════
+   Módulo de realidad aumentada (anclaje de modelos 3D) — diapositivas 60 a 65.
+   Usa los tokens del deck (marca.css) y funciona en ink y bone.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Número en círculo (A, B, C · 01–04) */
+.ra-n{flex:none;width:2.4em;height:2.4em;border-radius:50%;display:grid;place-items:center;
+  font-family:var(--f-titular);font-weight:700;font-size:var(--t-texto);color:var(--fondo);background:var(--acento)}
+.ra-n--app{background:var(--app)}
+.ra-n--oro{background:var(--oro-tema)}
+.ra-n--ok{background:var(--resuelto)}
+
+/* Visor 3D en un marco */
+.ra-visor{position:relative;width:100%;height:100%;min-height:0}
+.ra-marco{position:relative;width:100%;height:min(calc(var(--alto-util)*.78),560px);
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--superficie) 80%,transparent),transparent 85%)}
+.ra-marco>.esquinas{--esq-tam:calc(var(--u)*2.2)}
+.ra-pie{margin:var(--e-1) 0 0;font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.04em;
+  color:var(--texto-mute);text-align:center}
+
+/* 61 · Rediseño */
+.ra-dos{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:var(--e-5);align-items:center}
+@media (max-width:820px){.ra-dos{grid-template-columns:1fr}}
+
+/* 62 · Galería */
+.ra-galeria{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--e-2)}
+.ra-pieza{display:flex;flex-direction:column;border-radius:var(--r-3);overflow:hidden;
+  background:var(--vidrio);border:1px solid var(--vidrio-borde)}
+.ra-pieza__vista{position:relative;height:calc(var(--alto-util)*.27);min-height:110px}
+.ra-pieza__vista img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:var(--e-1)}
+.ra-pieza__falta{position:absolute;inset:var(--e-1);display:none;place-items:center;text-align:center;
+  border:1px dashed var(--linea);border-radius:var(--r-2);font-family:var(--f-mono);font-size:var(--t-etiqueta);
+  color:var(--texto-mute);padding:var(--e-1)}
+.ra-pieza--sin img{display:none}
+.ra-pieza--sin .ra-pieza__falta{display:grid}
+.ra-pieza__t{margin:0;padding:.55em .8em .65em;text-align:center;font-family:var(--f-titular);font-weight:700;
+  font-size:var(--t-chico);color:var(--texto);border-top:1px solid var(--linea)}
+@media (max-width:760px){.ra-galeria{grid-template-columns:repeat(2,1fr)}}
+
+/* 63 · Objetivos y 65 · Interacción: rejilla 2×2 */
+.ra-rejilla{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e-3)}
+@media (max-width:760px){.ra-rejilla{grid-template-columns:1fr}}
+.ra-item{display:flex;gap:var(--e-2);align-items:flex-start}
+.ra-item .tarjeta__t{font-size:var(--t-lead)}
+.ra-item .tarjeta__d{font-size:var(--t-chico)}
+.ra-lim{display:inline-block;margin-top:.6em;font-family:var(--f-mono);font-size:var(--t-etiqueta);font-weight:500;
+  letter-spacing:.06em;color:var(--acento);padding:.3em .75em;border-radius:var(--r-pleno);
+  border:1px solid color-mix(in srgb,var(--oro-tema) 45%,transparent)}
+
+/* 64 · SceneKit: tres pasos con flechas */
+.ra-pasos{display:flex;align-items:stretch;gap:var(--e-2)}
+.ra-paso{flex:1 1 0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:var(--e-1)}
+.ra-paso .tarjeta__t{font-size:var(--t-lead);margin-top:var(--e-1)}
+.ra-paso .tag{font-family:var(--f-mono);font-size:var(--t-etiqueta);letter-spacing:.06em;color:var(--texto-mute)}
+.ra-flecha{flex:none;align-self:center;color:var(--texto-mute);font-size:var(--t-3);font-weight:700}
+@media (max-width:760px){.ra-pasos{flex-direction:column}.ra-flecha{transform:rotate(90deg)}}
+
+/* ── Letra más grande en todas las diapositivas de RA ───────── */
+.diapo[data-id^="ra-"] .lead{font-size:max(19px,calc(var(--u)*1.75))}
+.diapo[data-id^="ra-"] .lista>li{font-size:var(--t-lead)}
+.diapo[data-id^="ra-"] .tarjeta__d{font-size:var(--t-lead);line-height:1.38}
+.diapo[data-id^="ra-"] .ra-item .tarjeta__t,
+.diapo[data-id^="ra-"] .ra-paso .tarjeta__t{font-size:max(20px,calc(var(--u)*1.95))}
+.diapo[data-id^="ra-"] .ra-n{font-size:var(--t-lead)}
+.diapo[data-id^="ra-"] .ra-lim,
+.diapo[data-id^="ra-"] .ra-paso .tag,
+.diapo[data-id^="ra-"] .ra-pie,
+.diapo[data-id^="ra-"] .ra-pieza__falta{font-size:var(--t-chico)}
+.diapo[data-id^="ra-"] .ra-pieza__t{font-size:var(--t-lead)}
+
+/* 66 · Objetivos ↔ resultados */
+.ra-tabla{display:flex;flex-direction:column;gap:var(--e-2)}
+.ra-res{display:grid;grid-template-columns:auto minmax(0,1.5fr) minmax(0,1fr);gap:var(--e-3);align-items:center;
+  padding:var(--e-2) var(--e-3);border-radius:var(--r-3);background:var(--vidrio);border:1px solid var(--vidrio-borde)}
+.ra-res__t{margin:0;font-family:var(--f-titular);font-weight:700;font-size:max(19px,calc(var(--u)*1.7));line-height:1.1;color:var(--texto)}
+.ra-res__d{margin:.25em 0 0;font-size:var(--t-texto);line-height:1.35;color:var(--texto-2)}
+.ra-res__dato{display:flex;align-items:baseline;gap:.5em;flex-wrap:wrap}
+.ra-res__dato b{font-family:var(--f-titular);font-weight:700;font-size:var(--t-3);line-height:1;color:var(--acento);font-variant-numeric:tabular-nums}
+.ra-res__dato span{font-size:var(--t-texto);line-height:1.3;color:var(--texto-2)}
+@media (max-width:820px){.ra-res{grid-template-columns:auto 1fr}.ra-res__dato{grid-column:2}}
+
+/* 61 · Mapa UV junto al modelo 3D */
+.diapo[data-id="ra-rediseno"] .ra-dos{grid-template-columns:minmax(0,36fr) minmax(0,64fr);gap:var(--e-4)}
+.ra-uv-par{display:grid;grid-template-columns:minmax(0,40fr) auto minmax(0,60fr);align-items:center;gap:var(--e-2)}
+.ra-uv{margin:0}
+.ra-uv img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:var(--r-2);
+  border:1px solid var(--vidrio-borde);box-shadow:0 10px 26px -14px rgba(60,40,20,.45)}
+.ra-uv-3d .ra-marco{height:min(calc(var(--alto-util)*.62),460px)}
+@media (max-width:820px){.ra-uv-par{grid-template-columns:1fr}.ra-uv-par .ra-flecha{transform:rotate(90deg);justify-self:center}}
