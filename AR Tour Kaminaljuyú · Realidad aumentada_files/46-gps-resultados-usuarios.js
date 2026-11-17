@@ -32,11 +32,6 @@
           ${tile('96.0%', '4.73', 'La llegada se detecta automáticamente', '--acento', 420, true)}
           ${tile('94.1%', '4.71', 'El mapa ayuda a ubicar los montículos', '--app', 490)}
         </div>
-        <div class="tarjeta" data-anim="subir" style="--retraso:580ms;margin-top:var(--e-3);padding:var(--e-2) var(--e-3);border-color:color-mix(in srgb,var(--resuelto) 40%,transparent)">
-          <p class="tarjeta__d"><b class="resuelto">Las 4 dimensiones validadas.</b>
-          Cada una superó los dos criterios: <span class="k">≥ 80%</span> favorable y media <span class="k">≥ 4.0</span>,
-          con 13–16 puntos y 0.63–0.73 de margen. La mejor valorada fue la <b style="color:var(--texto)">detección de llegada</b>.</p>
-        </div>
         ${Deck.fuente('Encuesta a usuarios, n = 101 · preguntas 10 a 13 del instrumento.')}
       </div>
     `
