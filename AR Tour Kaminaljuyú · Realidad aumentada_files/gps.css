@@ -92,3 +92,19 @@
   .gps-niv{grid-template-columns:auto 1fr auto;gap:.5em}
   .gps-niv__que{grid-column:1 / -1;order:3}
 }
+
+/* ── Texto ampliado para proyección: módulo GPS (diapositivas 14–21) ──────
+   Pedido: en la sala, la letra chica no se alcanza a leer. Se agrandan los
+   tokens de tipografía SOLO dentro del módulo (data-seccion="Módulo GPS").
+   El espaciado (--e-*) NO se toca, así el texto crece sin inflar los
+   márgenes ni los demás módulos. Los números grandes ya son legibles, así
+   que se dejan como están. */
+[data-seccion="Módulo GPS"]{
+  --t-etiqueta: max(18px, calc(var(--u) * 1.16));
+  --t-chico:    max(19px, calc(var(--u) * 1.42));
+  --t-texto:    max(21px, calc(var(--u) * 1.66));
+  --t-lead:     max(23px, calc(var(--u) * 2.00));
+  --t-3:        calc(var(--u) * 2.50);
+  --t-2:        calc(var(--u) * 3.55);
+  --t-1:        calc(var(--u) * 4.95);
+}
