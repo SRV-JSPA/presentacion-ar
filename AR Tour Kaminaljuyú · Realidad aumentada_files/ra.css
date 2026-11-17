@@ -87,3 +87,8 @@
   border:1px solid var(--vidrio-borde);box-shadow:0 10px 26px -14px rgba(60,40,20,.45)}
 .ra-uv-3d .ra-marco{height:min(calc(var(--alto-util)*.62),460px)}
 @media (max-width:820px){.ra-uv-par{grid-template-columns:1fr}.ra-uv-par .ra-flecha{transform:rotate(90deg);justify-self:center}}
+
+/* 62 · Galería con renders: tarjeta blanca como el fondo de la imagen */
+.diapo[data-id="ra-galeria"] .ra-pieza{background:#fff}
+.diapo[data-id="ra-galeria"] .ra-pieza__vista img{padding:var(--e-1) var(--e-2) 0}
+.ra-pieza__c{display:block;margin-top:.15em;font-family:var(--f-mono);font-weight:500;font-size:var(--t-etiqueta);letter-spacing:.08em;color:var(--acento)}

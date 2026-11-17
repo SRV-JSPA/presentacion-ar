@@ -1,72 +1,17 @@
-/* 19 · Cierre — ink. La misma Acrópolis de la portada (Monticulo12.obj), ya completa, pero vista desde
-   una órbita alta: la cámara baja desde casi cenital mientras gira, y desde su base se expanden curvas
-   de nivel doradas como anillos sobre el suelo (proyectadas con la misma cámara del visor, así quedan
-   acostadas en el plano). La guía virtual aparece con la línea de escaneo y dice su despedida
-   (VideoTranscripts.swift:165-171), palabra por palabra. «Gracias.» y «¿Preguntas?». */
+/* 19 · Cierre — ink. A la izquierda, el video del recorrido desde YouTube (https://youtu.be/9a-eQT1gBiw),
+   con audio y en bucle: se carga al entrar y se descarga al salir (así deja de sonar). Debajo del teléfono, el enlace al video. La guía virtual aparece con la línea
+   de escaneo y dice su despedida (VideoTranscripts.swift:165-171), palabra por palabra.
+   «Gracias.» y «¿Preguntas?». Antes aquí estaba la Acrópolis (Monticulo12.obj) en el visor 3D. */
 (function () {
-  var visor = null, anillos = null, lz = null, el0 = null, tActual = null;
+  var YT = '9a-eQT1gBiw', marco = null;
+  var EMBED = 'https://www.youtube-nocookie.com/embed/' + YT + '?autoplay=1&mute=0&loop=1&playlist=' + YT + '&controls=0&modestbranding=1&rel=0&playsinline=1';
   var CITA = 'Ha sido para mí un gusto ser tu guía el día de hoy.';
-  var N = 6, CICLO = 7.5;   /* anillos y segundos que tarda cada uno en llegar al borde */
 
   function palabras(t) {
     var w = t.split(' ');
     return w.map(function (p, i) {
       return '<span class="cierre__w" style="--i:' + i + '">' + (i === 0 ? '«' : '') + p + (i === w.length - 1 ? '»' : '') + '</span>';
     }).join(' ');
-  }
-
-  /* ── Proyección: la misma cámara de componentes/visor3d.js (camara()) ── */
-  function proyector(w, h) {
-    var geo = visor.geometria, c = visor.campos, H = geo.H, fov = 30 * Math.PI / 180, asp = w / Math.max(1, h);
-    var obj = [0, H * .36, 0], rb = Math.sqrt(geo.R * geo.R + Math.pow(H * .7, 2));
-    var dv = rb / Math.sin(fov / 2), dh = rb / Math.sin(Math.atan(Math.tan(fov / 2) * asp));
-    var d = Math.max(dv, dh) * .92 * ENCUADRE / Math.max(.1, Math.min(5, c.zoom));
-    var ci = Math.cos(c.inclinacion), si = Math.sin(c.inclinacion);
-    var ojo = [obj[0] + d * ci * Math.sin(c.giro), obj[1] + d * si, obj[2] + d * ci * Math.cos(c.giro)];
-    var f = norm([obj[0] - ojo[0], obj[1] - ojo[1], obj[2] - ojo[2]]), r = norm(cruz(f, [0, 1, 0])), u = cruz(r, f);
-    var t = Math.tan(fov / 2);
-    return function (x, z) {
-      var v = [x - ojo[0], -ojo[1], z - ojo[2]];
-      var px = v[0] * r[0] + v[1] * r[1] + v[2] * r[2], py = v[0] * u[0] + v[1] * u[1] + v[2] * u[2], pz = v[0] * f[0] + v[1] * f[1] + v[2] * f[2];
-      var nx = px / (pz * t * asp) + DESPLAZAR[0], ny = py / (pz * t) + DESPLAZAR[1];
-      return [(nx * .5 + .5) * w, (1 - (ny * .5 + .5)) * h];
-    };
-  }
-  function norm(a) { var l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
-  function cruz(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
-  var ENCUADRE = 1.32, DESPLAZAR = [0, .02];
-
-  /* Una curva de nivel cerrada, irregular como las del levantamiento (semilla por anillo) */
-  var FORMAS = [];
-  (function () {
-    var az = Deck.azar(19);
-    for (var k = 0; k < N; k++) FORMAS.push([az() * 6.28, az() * 6.28, az() * 6.28, .04 + az() * .03, .025 + az() * .02]);
-  })();
-  function dibujarAnillos(tiempo) {
-    if (!lz || !visor) return;
-    var c = lz.ctx, w = lz.ancho, h = lz.alto;
-    c.clearRect(0, 0, w, h);
-    if (!w || !h) return;
-    var pr = proyector(w, h), R = visor.geometria.R;
-    var oro = [230, 186, 98];
-    for (var k = 0; k < N; k++) {
-      var fase = tiempo == null ? (k + .5) / N : ((tiempo / CICLO + k / N) % 1);
-      var rad = R * (1.02 + fase * 2.5);
-      var alfa = Math.pow(1 - fase, 1.6) * Math.min(1, fase * 7) * .62;
-      if (alfa < .01) continue;
-      var F = FORMAS[k];
-      c.beginPath();
-      for (var i = 0; i <= 96; i++) {
-        var a = i / 96 * Math.PI * 2;
-        var rr = rad * (1 + F[3] * Math.sin(3 * a + F[0]) + F[4] * Math.sin(5 * a + F[1]) + .015 * Math.sin(9 * a + F[2]));
-        var p = pr(Math.cos(a) * rr, Math.sin(a) * rr);
-        if (i) c.lineTo(p[0], p[1]); else c.moveTo(p[0], p[1]);
-      }
-      c.closePath();
-      c.strokeStyle = 'rgba(' + oro.join(',') + ',' + alfa.toFixed(3) + ')';
-      c.lineWidth = k % 3 === 2 ? 1.9 : 1.1;   /* una maestra cada tres, como en el levantamiento */
-      c.stroke();
-    }
   }
 
   Presentacion.diapositiva({
@@ -78,15 +23,23 @@
     resumen: 'La guía se despide; preguntas',
     html: `
       <div class="lienzo cierre">
-        <div class="cierre__marco" data-decorativo aria-hidden="true">
-          <canvas class="cierre__anillos"></canvas>
-          <div class="cierre__visor"></div>
+        <div class="cierre__marco" data-decorativo>
+          <div class="cierre__tel">
+            <a class="cierre__tel-enlace" href="https://youtu.be/9a-eQT1gBiw" target="_blank" rel="noopener"
+               title="Ver el video en YouTube" aria-label="Ver el video del recorrido en YouTube">
+              <div class="telefono" data-ui="oscura" style="--ancho:clamp(190px,21vw,250px)">
+                <div class="telefono__pantalla">
+                  <div class="pantalla cierre__pantalla" data-ancho="390" data-alto="844"></div>
+                </div>
+              </div>
+            </a>
+            <a class="cierre__enlace" href="https://youtu.be/9a-eQT1gBiw" target="_blank" rel="noopener">▶ youtu.be/9a-eQT1gBiw</a>
+          </div>
         </div>
-        <div class="cierre__rotulo" data-anim="aparecer" style="--retraso:2600ms" aria-hidden="true">${Motivos.rotulo('C-II-4', 'Acrópolis', 'rotulo--oro')}</div>
 
         <figure class="cierre__guia" aria-hidden="true">
           <div class="cierre__guia-caja">
-            <img src="img/guia-despedida.png" alt="">
+            <img src="./AR Tour Kaminaljuyú · Realidad aumentada_files/guia-despedida.png" alt="">
             ${Motivos.escaneo('cierre__escaneo')}
           </div>
         </figure>
@@ -104,33 +57,17 @@
       </div>
     `,
     alEntrar: function (el) {
-      el0 = el;
-      if (!visor) {
-        visor = Visor3D.crear(el.querySelector('.cierre__visor'), {
-          modelo: 'm12', tono: 'ink', niveles: 12, giro: -.75, inclinacion: .9, velocidad: .12,
-          encuadre: ENCUADRE, desplazar: DESPLAZAR, grosor: 1.5, grosorCurvas: 1.2,
-          interactivo: !(window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches)
-        });
-        lz = Deck.lienzo(el.querySelector('.cierre__anillos'), function () { dibujarAnillos(tActual); });
-        anillos = Deck.bucle(function (dt, t) { tActual = t + 1.2; dibujarAnillos(tActual); });
-      }
-      visor.medir(); lz.medir();
-      if (Deck.quieto()) {
-        visor.final({ curvas: .22 });
-        visor.ahora({ inclinacion: .9, zoom: 1 });
-        tActual = null; dibujarAnillos(null);
-        return;
-      }
-      /* la cámara baja desde una órbita casi cenital mientras el modelo gira */
-      visor.final({ curvas: .22 });
-      visor.ahora({ inclinacion: 1.38, zoom: .78, giro: -1.35 });
-      visor.estado({ inclinacion: .9, zoom: 1 }, { ms: 3600, retraso: 250, curva: 'suave' });
-      visor.iniciar();
-      anillos.iniciar();
+      marco = el.querySelector('.cierre__pantalla');
+      if (!marco || Deck.quieto() || marco.querySelector('iframe')) return;
+      var f = document.createElement('iframe');
+      f.className = 'cierre__video';
+      f.src = EMBED;
+      f.title = 'Video del recorrido AR Tour Kaminaljuyú';
+      f.allow = 'autoplay; encrypted-media; picture-in-picture';
+      f.setAttribute('tabindex', '-1');
+      marco.appendChild(f);
     },
-    alSalir: function () {
-      if (visor) { visor.detener(); visor.cancelar(); }
-      if (anillos) anillos.detener();
-    }
+    /* al salir se quita el iframe para que el video deje de sonar y de consumir datos */
+    alSalir: function () { if (marco) { var f = marco.querySelector('iframe'); if (f) f.remove(); } }
   });
 })();

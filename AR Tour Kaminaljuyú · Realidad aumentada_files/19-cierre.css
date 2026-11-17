@@ -62,3 +62,15 @@
   .diapo[data-id="cierre"] .cierre__cabeza .titular{font-size:min(calc(var(--u)*7.5),19vw)}
   .diapo[data-id="cierre"] .cierre__cita{max-width:none}
 }
+
+/* Video del recorrido en lugar del modelo 3D */
+.diapo[data-id="cierre"] .cierre__video{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000;pointer-events:none}
+.diapo[data-id="cierre"] .cierre__tel{position:absolute;inset:0;bottom:calc(var(--reserva-abajo)*.5);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--e-2);padding-right:12%}
+.diapo[data-id="cierre"] .cierre__pantalla{background:#000}
+.diapo[data-id="cierre"] .cierre__enlace{display:inline-block;margin-top:var(--e-2);font-family:var(--f-mono);font-size:var(--t-chico);letter-spacing:.04em;
+  color:var(--acento);text-decoration:none;padding:.45em .9em;border-radius:var(--r-pleno);border:1px solid color-mix(in srgb,var(--oro-tema) 50%,transparent)}
+.diapo[data-id="cierre"] .cierre__enlace:hover{background:color-mix(in srgb,var(--oro-tema) 14%,transparent)}
+.diapo[data-id="cierre"] .cierre__tel-enlace{display:block;cursor:pointer;pointer-events:auto;border-radius:12%;transition:transform .35s var(--ease-expo,ease)}
+.diapo[data-id="cierre"] .cierre__tel-enlace:hover{transform:translateY(-4px) scale(1.02)}
+.diapo[data-id="cierre"] .cierre__tel-enlace:focus-visible{outline:2px solid var(--oro-tema);outline-offset:6px}
+.diapo[data-id="cierre"] .cierre__tel .cierre__enlace{margin-top:0;pointer-events:auto;position:relative;z-index:4}
