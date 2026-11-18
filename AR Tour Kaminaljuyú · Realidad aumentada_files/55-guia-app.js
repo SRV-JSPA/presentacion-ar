@@ -27,7 +27,7 @@
           </div>
         </div>
         <div style="flex:0 0 auto;margin-right:clamp(0px,8vw,160px)" data-anim="escala">
-          <div class="telefono" data-ui="oscura" style="--ancho:clamp(200px,23vw,264px)">
+          <div class="telefono" data-ui="oscura" style="--ancho:clamp(240px,27.5vw,316px)">
             <div class="telefono__pantalla">
               <div class="pantalla" data-ancho="390" data-alto="844">
                 <video class="guia-video" src="${DIR}app-recorrido.mp4" muted loop playsinline preload="auto" aria-label="Grabación de la app: el guía en el recuadro sobre la cámara" style="background:#000"></video>

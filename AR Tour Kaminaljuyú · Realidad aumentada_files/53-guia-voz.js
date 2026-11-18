@@ -30,7 +30,7 @@
           <div data-anim="escala" style="--retraso:300ms;align-self:stretch;width:100%">${onda()}</div>
           <div class="tarjeta tarjeta--oro" data-anim="subir" style="--retraso:420ms;padding:var(--e-2) var(--e-3)">
             <span class="esquinas esquinas--mira" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-            <p class="cifra" style="font-size:2.6rem;margin:0">1,386 s</p>
+            <p class="cifra" style="font-size:3.6rem;margin:0">1,386 s</p>
             <p class="tarjeta__d">de narración entre ambos idiomas</p>
           </div>
         </div>

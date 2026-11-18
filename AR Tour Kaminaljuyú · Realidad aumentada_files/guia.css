@@ -14,3 +14,18 @@
   background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid rgba(255,255,255,.85)}
 .guia-recuadro .guia-video{object-position:center 12%}
 .guia-nota{display:inline-block;margin-left:.4em;font-size:.8em;color:var(--oro-tema)}
+
+/* ── Texto ampliado para proyección: módulo Guía virtual ──────
+   Misma escala que el módulo GPS (gps.css): se agrandan los tokens de
+   tipografía solo dentro de esta sección. */
+[data-seccion="Guía virtual"]{
+  --t-etiqueta: max(18px, calc(var(--u) * 1.16));
+  --t-chico:    max(19px, calc(var(--u) * 1.42));
+  --t-texto:    max(21px, calc(var(--u) * 1.66));
+  --t-lead:     max(23px, calc(var(--u) * 2.00));
+  --t-3:        calc(var(--u) * 2.50);
+  --t-2:        calc(var(--u) * 3.55);
+  --t-1:        calc(var(--u) * 4.95);
+}
+.guia-onda{width:100%;min-width:260px;height:clamp(130px,24vh,230px)}
+.guia-onda i{min-width:2px}

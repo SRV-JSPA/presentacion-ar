@@ -30,7 +30,7 @@
           </div>
         </div>
         <div style="flex:0 0 auto;margin-right:clamp(0px,8vw,160px);--retraso:300ms" data-anim="escala">
-          <div class="telefono" data-ui="oscura" style="--ancho:clamp(200px,23vw,264px)">
+          <div class="telefono" data-ui="oscura" style="--ancho:clamp(240px,27.5vw,316px)">
             <div class="telefono__pantalla">
               <div class="pantalla" data-ancho="390" data-alto="844" style="background:#fff">
                 <video class="guia-video" src="${VIDEO}" muted loop playsinline preload="auto" aria-label="El guía virtual animado"></video>
