@@ -19,7 +19,7 @@
           <div class="tarjeta tarjeta--oro" data-anim="subir" style="--retraso:240ms;flex:0 1 230px;padding:var(--e-2) var(--e-3)">
             <span class="esquinas esquinas--mira" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <p class="cifra" style="font-size:4.6rem;margin:0">101</p>
-            <p class="tarjeta__d">participantes, dentro del Parque Kaminaljuyú</p>
+            <p class="tarjeta__d">participantes, dentro del campus universitario</p>
           </div>
           <div class="tarjeta" data-anim="subir" style="--retraso:320ms;flex:1 1 380px;padding:var(--e-2) var(--e-3)">
             ${linea('Tamaño del recuadro', '96.4%', '4.70')}
