@@ -15,14 +15,13 @@
     resumen: 'Rediseñar, interactuar, anclar y evaluar',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Objetivos', 'Rediseñar, interactuar, anclar y evaluar.', { sm: true })}
+        ${Deck.cabeza('Objetivos', 'Rediseñar, interactuar, anclar y evaluar', { sm: true })}
         <div class="ra-rejilla" style="margin-top:var(--e-4)">
           ${obj(1, 'Rediseñar', 'Modelos 3D más realistas y fieles a la historia.', 280)}
           ${obj(2, 'Interactuar', 'Gestos de Android en iOS: escalar y subir sin perder estabilidad.', 360, 'app')}
           ${obj(3, 'Anclar', 'Detectar planos con ARKit para fijar los modelos al entorno.', 440, 'ok')}
           ${obj(4, 'Evaluar', 'Probar con usuarios el realismo, las sombras y la luz.', 520, 'oro')}
         </div>
-        ${Deck.fuente('Objetivos específicos del trabajo de graduación, módulo de realidad aumentada.')}
       </div>
     `
   });

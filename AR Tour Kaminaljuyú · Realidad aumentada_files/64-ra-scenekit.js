@@ -17,7 +17,7 @@
     resumen: 'Del archivo .obj al modelo dibujado sobre la cámara',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('SceneKit', 'Posicionamiento de los modelos.', { sm: true })}
+        ${Deck.cabeza('SceneKit', 'Posicionamiento de los modelos', { sm: true })}
         <div class="ra-pasos" style="margin-top:var(--e-4)">
           ${paso('A', 'Modelos en formato .obj', 'Blender → app', 'Se cargan los modelos 3D rediseñados en Blender, uno por cada punto.', '', 260)}
           ${F}

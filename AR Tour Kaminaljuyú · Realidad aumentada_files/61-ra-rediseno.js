@@ -13,7 +13,7 @@
       <div class="lienzo">
         <div class="ra-dos">
           <div class="pila" style="gap:var(--e-3)">
-            ${Deck.cabeza('Rediseño en Blender', 'Los montículos, rediseñados en Blender.', { sm: true })}
+            ${Deck.cabeza('Rediseño en Blender', 'Los montículos, rediseñados en Blender', { sm: true })}
             <p class="lead" data-anim="subir" style="--retraso:240ms">
               En la <b style="color:var(--texto)">vista UV</b> de Blender, el mapeo UV despliega la malla de la
               pirámide sobre la textura. Así se comprueba que la imagen de piedra se ajuste

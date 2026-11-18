@@ -27,7 +27,7 @@
           <div class="cierre__tel">
             <a class="cierre__tel-enlace" href="https://youtu.be/9a-eQT1gBiw" target="_blank" rel="noopener"
                title="Ver el video en YouTube" aria-label="Ver el video del recorrido en YouTube">
-              <div class="telefono" data-ui="oscura" style="--ancho:clamp(190px,21vw,250px)">
+              <div class="telefono" data-ui="oscura" style="--ancho:clamp(230px,25vw,300px)">
                 <div class="telefono__pantalla">
                   <div class="pantalla cierre__pantalla" data-ancho="390" data-alto="844"></div>
                 </div>

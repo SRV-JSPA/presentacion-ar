@@ -92,3 +92,20 @@
 .diapo[data-id="ra-galeria"] .ra-pieza{background:#fff}
 .diapo[data-id="ra-galeria"] .ra-pieza__vista img{padding:var(--e-1) var(--e-2) 0}
 .ra-pieza__c{display:block;margin-top:.15em;font-family:var(--f-mono);font-weight:500;font-size:var(--t-etiqueta);letter-spacing:.08em;color:var(--acento)}
+
+/* 66 · Letra más grande en la tabla de resultados */
+.diapo[data-id="ra-resultados"] .ra-tabla{gap:var(--e-3);margin-top:var(--e-4)!important}
+.diapo[data-id="ra-resultados"] .ra-res{padding:var(--e-3)}
+.diapo[data-id="ra-resultados"] .ra-res__t{font-size:max(22px,calc(var(--u)*2.2))}
+.diapo[data-id="ra-resultados"] .ra-res__d{font-size:var(--t-lead)}
+.diapo[data-id="ra-resultados"] .ra-res__dato b{font-size:max(30px,calc(var(--u)*2.9))}
+.diapo[data-id="ra-resultados"] .ra-res__dato span{font-size:var(--t-lead)}
+.diapo[data-id="ra-resultados"] .ra-n{font-size:var(--t-lead);width:2.6em;height:2.6em}
+
+/* 64 · SceneKit: letra más grande */
+.diapo[data-id="ra-scenekit"] .ra-pasos{margin-top:var(--e-5)!important}
+.diapo[data-id="ra-scenekit"] .ra-paso{padding:var(--e-4) var(--e-3)}
+.diapo[data-id="ra-scenekit"] .ra-paso .tarjeta__t{font-size:max(24px,calc(var(--u)*2.4))}
+.diapo[data-id="ra-scenekit"] .ra-paso .tag{font-size:var(--t-texto)}
+.diapo[data-id="ra-scenekit"] .ra-paso .tarjeta__d{font-size:max(19px,calc(var(--u)*1.65))}
+.diapo[data-id="ra-scenekit"] .ra-n{font-size:var(--t-3);width:2.2em;height:2.2em}
