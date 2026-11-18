@@ -15,7 +15,7 @@
             <p class="cifra" aria-hidden="true" style="margin:0;line-height:1;font-size:5rem">03</p>
           </div>
           <p class="lead" data-anim="subir" style="--retraso:280ms;max-width:56ch;font-size:calc(var(--u)*3.4);color:var(--texto);margin-top:var(--e-3)">Implementación de un sistema de anclaje de modelos 3D rediseñados en Blender, con ARKit y SceneKit, en realidad aumentada para iOS en el Parque Arqueológico Kaminaljuyú.</p>
-          ${Deck.fuente('Universidad del Valle de Guatemala · Trabajo de graduación')}
+          <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Universidad del Valle de Guatemala · Trabajo de graduación</p>
         </div>
       </div>
     `

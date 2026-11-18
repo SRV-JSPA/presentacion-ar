@@ -17,7 +17,7 @@
     resumen: 'Cada objetivo con su resultado',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Resultados', 'Objetivos y resultados', { sm: true })}
+        ${Deck.cabeza('Resultados', 'Qué tanto se cumplieron los objetivos.', { sm: true })}
         <div class="ra-tabla" style="margin-top:var(--e-3)">
           ${fila(1, 'Rediseñar', '5 montículos en Blender (vértices, Bevel, Boolean, UV y oclusión ambiental) y La Palangana con textura nueva.', '4.63', 'colores y texturas · 92.1 % favorable', '', 260)}
           ${fila(2, 'Interactuar', 'Pellizco de 0.1× a 5.0× y traslación vertical de −1 a 1 m, sin rotación manual.', '4.71', 'gestos intuitivos y fluidos · 94.1 %', 'app', 340)}

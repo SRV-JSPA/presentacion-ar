@@ -28,7 +28,7 @@
             ${linea('Legibilidad del texto', '90.4%', '4.63', 'a mejorar con luz exterior')}
           </div>
         </div>
-        ${Deck.fuente('Escala de Likert 1–5 · % de respuestas 4 y 5.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Escala de Likert 1–5 · % de respuestas 4 y 5.</p>
       </div>
     `
   });

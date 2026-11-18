@@ -60,7 +60,7 @@
     html: `
       <div class="lienzo capas">
         <div class="capas__texto">
-          ${Deck.cabeza('El problema', 'Solo existía para Android: quien tenía iPhone no podía realizar el recorrido.', { sm: true })}
+          ${Deck.cabeza('El problema', 'Solo existía para Android. En iPhone no se podía hacer el recorrido.', { sm: true })}
           <ul class="lista capas__modulos" data-anim-grupo="subir" data-intervalo="110" style="--retraso:340ms">
             <li><span><b>GPS</b> decide <span class="k">cuándo</span></span></li>
             <li><span><b>ARKit</b> dibuja <span class="k">dónde</span></span></li>

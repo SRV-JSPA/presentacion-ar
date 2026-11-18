@@ -30,14 +30,14 @@
         </div>
 
         <div class="portada__texto">
-          <p class="etiqueta etiqueta--punto" data-anim="subir">Realidad aumentada · iOS · Exposición de curso</p>
+          <p class="etiqueta etiqueta--punto" data-anim="subir" style="font-size:1.05rem">Realidad aumentada · iOS · Exposición de curso</p>
           <h1 class="portada__titulo">
             <span class="portada__ar" data-anim="subir" style="--retraso:120ms">AR Tour</span>
             <span class="portada__nombre" data-anim="subir" style="--retraso:220ms">Kaminaljuyú</span>
             <span class="portada__barra" aria-hidden="true"><i></i></span>
           </h1>
           <p class="lead" data-anim="subir" style="--retraso:420ms">Un recorrido guiado con realidad aumentada, pensado para el Parque Arqueológico Kaminaljuyú.</p>
-          <p class="portada__pie" data-anim="aparecer" style="--retraso:700ms">Universidad del Valle de Guatemala · Facultad de Ingeniería · 2026</p>
+          <p class="portada__pie" data-anim="aparecer" style="--retraso:700ms;font-size:1.25rem">Universidad del Valle de Guatemala · Facultad de Ingeniería · 2026</p>
         </div>
       </div>
     `,

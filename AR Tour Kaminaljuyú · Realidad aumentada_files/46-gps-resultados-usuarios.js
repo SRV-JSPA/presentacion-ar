@@ -23,7 +23,7 @@
     html: `
       <div class="lienzo" style="position:relative;overflow:hidden">
         <span class="escaneo escaneo--subir" aria-hidden="true" style="--escaneo-dur:3s"></span>
-        ${Deck.cabeza('Resultados · usuarios', '101 participantes; acuerdo alto y constante.', { sm: true })}
+        ${Deck.cabeza('Resultados · usuarios', '101 participantes, con un acuerdo alto y constante.', { sm: true })}
         <p class="texto" data-anim="subir" style="--retraso:200ms;margin-top:var(--e-1)">
           Recorrido de prueba en el campus de la UVG · escala Likert 1–5 · cuatro afirmaciones del módulo.</p>
         <div class="fila" style="margin-top:var(--e-3);gap:var(--e-3);align-items:stretch">
@@ -32,7 +32,7 @@
           ${tile('96.0%', '4.73', 'La llegada se detecta automáticamente', '--acento', 420, true)}
           ${tile('94.1%', '4.71', 'El mapa ayuda a ubicar los montículos', '--app', 490)}
         </div>
-        ${Deck.fuente('Encuesta a usuarios, n = 101 · preguntas 10 a 13 del instrumento.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Encuesta a usuarios, n = 101 · preguntas 10 a 13 del instrumento.</p>
       </div>
     `
   });

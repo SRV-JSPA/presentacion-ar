@@ -16,7 +16,7 @@
     resumen: 'Geolocalizar, mapear, detectar proximidad, comunicar y validar',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Objetivos', 'Geolocalizar, mapear, detectar, comunicar y validar.')}
+        ${Deck.cabeza('Objetivos', 'Geolocalizar, mapear, detectar, comunicar y validar la ubicación.')}
         <div class="fila" data-anim-grupo="subir" data-intervalo="90"
              style="margin-top:var(--e-4);gap:var(--e-3);align-items:stretch">
           ${obj('Geolocalizar', 'Rastrear la ubicación del visitante en tiempo real con las librerías nativas de iOS.', 280)}
@@ -25,7 +25,7 @@
           ${obj('Comunicar', 'Transmitir coordenadas, metadatos y eventos de llegada al módulo de RA.', 520)}
           ${obj('Validar', 'Comprobar todo con pruebas de usuario en dispositivo físico.', 600, true)}
         </div>
-        ${Deck.fuente('Objetivos específicos del trabajo de graduación, módulo de GPS y navegación.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Objetivos específicos del trabajo de graduación, módulo de GPS y navegación.</p>
       </div>
     `
   });

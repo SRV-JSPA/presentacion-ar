@@ -35,7 +35,7 @@
           </div>
         </div>
        </div>
-        ${Deck.fuente('Elegida frente a Google TTS, Amazon Polly, Azure Speech y Murf AI por su naturalidad y control de la voz.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Elegida frente a Google TTS, Amazon Polly, Azure Speech y Murf AI por su naturalidad y control de la voz.</p>
       </div>
     `
   });

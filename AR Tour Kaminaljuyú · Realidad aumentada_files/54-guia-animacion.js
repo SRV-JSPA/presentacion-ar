@@ -3,7 +3,7 @@
 (function () {
   var VIDEO = './AR Tour Kaminaljuyú · Realidad aumentada_files/guia-maya.mp4';
   function paso(t, d, retraso, oro) {
-    return '<div class="tarjeta' + (oro ? ' tarjeta--oro' : '') + '" data-anim="subir" style="--retraso:' + retraso + 'ms;padding:.7em 1em">' +
+    return '<div class="tarjeta' + (oro ? ' tarjeta--oro' : '') + '" data-anim="subir" style="--retraso:' + retraso + 'ms;padding:.45em .9em">' +
       '<p class="tarjeta__t">' + t + '</p><p class="tarjeta__d">' + d + '</p></div>';
   }
   function flecha(retraso) {
@@ -20,8 +20,8 @@
       <div class="lienzo">
        <div class="fila" style="gap:var(--e-5);align-items:center">
         <div class="pila" style="flex:1 1 320px;gap:var(--e-2)">
-          ${Deck.cabeza('Animación · InfiniteTalk', 'Una imagen y un audio: el guía cobra vida.', { sm: true })}
-          <div class="pila" style="gap:.35em;margin-top:var(--e-2);max-width:34rem">
+          ${Deck.cabeza('Animación · InfiniteTalk', 'Una imagen y un audio bastan para animar al guía.', { sm: true })}
+          <div class="pila" style="gap:.2em;margin-top:var(--e-1);max-width:34rem">
             ${paso('Imagen del personaje + audio narrado', 'El insumo: la ilustración maya y la voz de ElevenLabs.', 260)}
             ${flecha(340)}
             ${paso('InfiniteTalk', 'Genera el movimiento a partir del audio, guiado por prompts.', 400)}
@@ -39,7 +39,7 @@
           </div>
         </div>
        </div>
-        ${Deck.fuente('Elegida frente a SadTalker, Wav2Lip y D-ID por su sincronía labial y gestual.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;margin-top:var(--e-1);font-size:1.1rem;font-weight:700">Elegida frente a SadTalker, Wav2Lip y D-ID por su sincronía labial y gestual.</p>
       </div>
     `,
     alEntrar: function (el) {

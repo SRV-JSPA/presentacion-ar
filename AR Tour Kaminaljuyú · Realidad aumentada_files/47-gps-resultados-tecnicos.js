@@ -27,7 +27,7 @@
     html: `
       <div class="lienzo" style="position:relative;overflow:hidden">
         <span class="escaneo escaneo--subir" aria-hidden="true" style="--escaneo-dur:3s"></span>
-        ${Deck.cabeza('Resultados · técnico', '15 corridas: lo que percibe el usuario, medido.', { sm: true })}
+        ${Deck.cabeza('Resultados · técnico', '15 corridas que miden lo que percibe el usuario.', { sm: true })}
         <div class="fila" style="margin-top:var(--e-3);gap:var(--e-3);align-items:stretch">
           ${tile('99.90%', 'lecturas aceptadas (4&nbsp;197 / 4&nbsp;201)', '--resuelto', 280)}
           ${tile('4.97 m', 'precisión media · 97.74% ≤ 5 m', '--app', 350)}
@@ -41,7 +41,7 @@
           ${cp('CP-03', 'Detección de llegada al cruzar los 25 m', 700)}
           ${cp('CP-04', 'Avance secuencial y transiciones del recorrido', 750)}
         </div>
-        ${Deck.fuente('Instrumentación PerformanceLogger · 15 corridas controladas.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Instrumentación PerformanceLogger · 15 corridas controladas.</p>
       </div>
     `
   });

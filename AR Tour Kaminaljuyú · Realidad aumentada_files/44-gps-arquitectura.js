@@ -26,7 +26,7 @@
     resumen: 'De la señal a la fachada que consume el módulo de RA',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Arquitectura', 'Una tubería de datos, una fachada como contrato.', { sm: true })}
+        ${Deck.cabeza('Arquitectura', 'Los datos pasan por una tubería con una fachada como contrato.', { sm: true })}
         <div class="gps-flow" data-anim-grupo="subir" data-intervalo="70" style="margin-top:var(--e-4)">
           ${NODOS.map(function (n, i) { return nodo(n, i === NODOS.length - 1); }).join('')}
         </div>

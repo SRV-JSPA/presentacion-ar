@@ -206,7 +206,7 @@
     resumen: 'Comandos, eventos y estado',
     html: `
       <div class="lienzo ev">
-        ${Deck.cabeza('Comunicación', 'Comandos, eventos y estado: tres vías.')}
+        ${Deck.cabeza('Comunicación', 'Se comunican por comandos, eventos y estado.')}
         <div class="ev__carriles">
           <canvas class="ev__lienzo" aria-hidden="true" data-decorativo></canvas>
 

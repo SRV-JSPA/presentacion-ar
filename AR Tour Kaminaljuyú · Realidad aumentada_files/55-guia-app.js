@@ -3,10 +3,10 @@
 (function () {
   var DIR = './AR Tour Kaminaljuyú · Realidad aumentada_files/';
   function dec(beneficio, tag, apoyo, color, retraso) {
-    return '<div class="gps-dec" data-anim="subir" style="--retraso:' + retraso + 'ms">' +
+    return '<div class="gps-dec" data-anim="subir" style="--retraso:' + retraso + 'ms;padding:.5em .8em">' +
       '<p class="gps-dec__h"><b style="color:var(' + color + ')">' + beneficio + '</b></p>' +
-      '<span class="gps-dec__tag">' + tag + '</span>' +
-      '<p class="gps-dec__r">' + apoyo + '</p></div>';
+      '<span class="gps-dec__tag" style="margin:.3em 0 0">' + tag + '</span>' +
+      '<p class="gps-dec__r" style="margin:.35em 0 0">' + apoyo + '</p></div>';
   }
   var video = null;
   Presentacion.diapositiva({
@@ -19,8 +19,8 @@
       <div class="lienzo">
        <div class="fila" style="gap:var(--e-5);align-items:center">
         <div class="pila" style="flex:1 1 340px;gap:var(--e-2)">
-          ${Deck.cabeza('En la app', 'Un recuadro sobre la cámara: el parque sigue al frente.', { sm: true })}
-          <div class="pila" data-anim-grupo="subir" data-intervalo="80" style="gap:var(--e-2);margin-top:var(--e-2)">
+          ${Deck.cabeza('En la app', 'Un recuadro aparece sobre la cámara y el parque sigue al frente.', { sm: true })}
+          <div class="pila" data-anim-grupo="subir" data-intervalo="80" style="gap:.35em;margin-top:var(--e-1)">
             ${dec('No tapa el sitio', 'Recuadro superpuesto', 'Más simple y estable que anclar un modelo 3D en exteriores.', '--acento', 260)}
             ${dec('Aparece al llegar', 'Core Location', 'Cada punto de interés dispara su narración y animación.', '--app', 340)}
             ${dec('Voz e imagen juntas', 'AVFoundation · ARKit', 'Reproducción del contenido sobre la vista de la cámara.', '--resuelto', 420)}
@@ -36,7 +36,7 @@
           </div>
         </div>
        </div>
-        ${Deck.fuente('Swift · Xcode · ARKit · Core Location · AVFoundation')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;margin-top:var(--e-1);font-size:1.1rem;font-weight:700">Swift · Xcode · ARKit · Core Location · AVFoundation</p>
       </div>
     `,
     alEntrar: function (el) {

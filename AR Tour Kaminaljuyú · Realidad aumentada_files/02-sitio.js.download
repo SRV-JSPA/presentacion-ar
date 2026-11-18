@@ -256,7 +256,7 @@
             <li class="sitio__li sitio__li--perdidos" data-paso="1"><span>La mayoría, demolidos por la expansión urbana</span></li>
             <li class="sitio__li sitio__li--parque" data-paso="2"><span><b class="k">40</b> se conservan · <b class="k">9</b> dentro del parque</span></li>
           </ul>
-          ${Deck.fuente('Según la narración «Datos arqueológicos» de la guía virtual de la app.')}
+          <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Según la narración «Datos arqueológicos» de la guía virtual de la app.</p>
         </div>
 
         <div class="sitio__escena">

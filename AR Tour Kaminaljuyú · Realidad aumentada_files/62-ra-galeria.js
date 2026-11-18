@@ -26,7 +26,7 @@
     resumen: 'Los montículos rediseñados que se colocan en realidad aumentada',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Galería', 'Los modelos del recorrido', { sm: true })}
+        ${Deck.cabeza('Galería', 'Los modelos 3D del recorrido.', { sm: true })}
         <div class="ra-galeria" data-anim-grupo="subir" data-intervalo="80" style="margin-top:var(--e-3)">
           ${PIEZAS.map(pieza).join('')}
         </div>

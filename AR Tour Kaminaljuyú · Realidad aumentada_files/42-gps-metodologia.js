@@ -26,7 +26,7 @@
     resumen: 'Desarrollo iterativo: cada fase deja una capacidad verificable',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Metodología', 'Ocho fases, cada una se apoya en la anterior.', { sm: true })}
+        ${Deck.cabeza('Metodología', 'Ocho fases en cascada.', { sm: true })}
         <p class="texto" data-anim="subir" style="--retraso:200ms;margin-top:var(--e-1);max-width:60ch">
           Desarrollo <b style="color:var(--texto)">iterativo e incremental</b>. El contrato con el módulo de RA
           se definió en la fase&nbsp;7, pero se acordó temprano para avanzar en paralelo.</p>

@@ -24,7 +24,7 @@
     html: `
       <div class="lienzo" style="position:relative;overflow:hidden">
         <span class="escaneo escaneo--subir" aria-hidden="true" style="--escaneo-dur:3s"></span>
-        ${Deck.cabeza('Resultados', '95% completó el recorrido; microsegundos de costo.', { sm: true })}
+        ${Deck.cabeza('Resultados', '95% completó el recorrido. El costo fue de microsegundos.', { sm: true })}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--e-5);margin-top:var(--e-3)">
           <div>
             <p class="etiqueta" data-anim="subir" style="--retraso:220ms;position:relative;z-index:2">Usuarios · 101 participantes</p>
@@ -46,7 +46,7 @@
               ${cifraTile('&lt;1 µs', 'aviso a 4 módulos', '--resuelto', 560, false)}
               ${cifraTile('10.3 µs', 'ruta de 3 puntos', '--app', 590, false)}
             </div>
-            <p class="tarjeta__d" data-anim="subir" style="--retraso:640ms;margin-top:var(--e-2);position:relative;z-index:2">Memoria similar a la versión Android (38–40 vs. 42–44 MB).</p>
+            <p class="tarjeta__d" data-anim="subir" style="--retraso:640ms;margin-top:var(--e-2);position:relative;z-index:2;font-size:1.4rem;font-weight:700">Memoria similar a la versión Android (38–40 vs. 42–44 MB).</p>
           </div>
         </div>
       </div>

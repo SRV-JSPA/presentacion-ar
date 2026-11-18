@@ -39,7 +39,7 @@
           ${panel('Lenguaje · 13 pruebas', '--oro-tema',
             pill('Textos', 6) + pill('Idioma', 4) + pill('Videos', 3), 530)}
         </div>
-        <p class="tarjeta__d" data-anim="subir" style="--retraso:600ms;margin-top:var(--e-3);position:relative;z-index:2">Solo 125 de 7 616 líneas son núcleo compartido · 52 textos y 16 videos por idioma · XCTest y Swift Testing en Xcode.</p>
+        <p class="tarjeta__d" data-anim="subir" style="--retraso:600ms;margin-top:var(--e-3);position:relative;z-index:2;font-size:1.4rem;font-weight:700">Solo 125 de 7 616 líneas son núcleo compartido · 52 textos y 16 videos por idioma · XCTest y Swift Testing en Xcode.</p>
       </div>
     `
   });

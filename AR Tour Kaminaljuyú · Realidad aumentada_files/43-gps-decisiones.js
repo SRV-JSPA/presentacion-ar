@@ -17,7 +17,7 @@
     resumen: 'Cinco decisiones, cada una por un beneficio concreto',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Decisiones', 'Cada tecnología, por un beneficio concreto.', { sm: true })}
+        ${Deck.cabeza('Decisiones', 'Cada tecnología se eligió por un beneficio concreto.', { sm: true })}
         <div class="gps-decs" data-anim-grupo="subir" data-intervalo="80" style="margin-top:var(--e-3)">
           ${dec('Ubicación muy precisa', 'CoreLocation', 'Usa la mejor precisión del teléfono y descarta las señales poco confiables.', '--app', 260)}
           ${dec('Distancias exactas a pie', 'Fórmula de Haversine', 'Precisa a pocos metros y muy rápida de calcular en el teléfono.', '--acento', 340)}
@@ -25,7 +25,7 @@
           ${dec('Un mapa que ya conocen', 'Google Maps', 'Cartografía detallada de Guatemala, familiar para el visitante.', '--app', 500)}
           ${dec('Las partes se avisan solas', 'Combine', 'El GPS notifica al resto de la app justo cuando algo ocurre.', '--acento', 580)}
         </div>
-        ${Deck.fuente('Selección y justificación de tecnologías del módulo.')}
+        <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Selección y justificación de tecnologías del módulo.</p>
       </div>
     `
   });

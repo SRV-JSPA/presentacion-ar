@@ -16,7 +16,7 @@
     resumen: 'Pellizco para escalar, deslizar para subir o bajar, caminar para explorar',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Interacción', 'Interacción con los modelos 3D', { sm: true })}
+        ${Deck.cabeza('Interacción', 'Cómo interactúa el usuario con los modelos.', { sm: true })}
         <div class="ra-rejilla" style="margin-top:var(--e-4)">
           ${item('01', 'Gestos a utilizar', 'El escalado se hace con el <b style="color:var(--texto)">pellizco con dos dedos</b> y la traslación vertical con un <b style="color:var(--texto)">deslizamiento</b> del dedo hacia arriba o hacia abajo.', '', 260)}
           ${item('02', 'Traslación vertical', 'El gesto desplaza el nodo del modelo en el eje Y respecto a su posición de anclaje. Al llegar al límite el modelo no se mueve más y conserva su estabilidad espacial.', 'oro', 340, 'eje Y · −1 m a 1 m')}

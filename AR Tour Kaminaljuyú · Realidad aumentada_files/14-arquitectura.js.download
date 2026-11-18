@@ -39,7 +39,7 @@
     resumen: 'App, núcleo compartido y cuatro módulos funcionales',
     html: `
       <div class="lienzo">
-        ${Deck.cabeza('Arquitectura', 'Arquitectura en tres capas.', { sm: true })}
+        ${Deck.cabeza('Arquitectura', 'El sistema tiene tres capas.', { sm: true })}
         <div style="margin-top:var(--e-2);width:100%">
           ${banda('1 · App', '--app', ['Punto de entrada', 'Contenedor de dependencias', 'Navegación', 'Pantallas e interfaz'], [], 250)}
           ${flecha('reúne e inyecta')}
