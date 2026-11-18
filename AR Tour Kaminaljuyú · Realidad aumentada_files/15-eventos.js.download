@@ -188,10 +188,8 @@
   function aplicarPaso(n, atras) {
     paso = n;
     limpiar();
-    if (n < 1) { disparo = -1; recibido = false; el0.classList.remove('ev--recibido'); }
-    else if (atras || Deck.quieto()) { recibido = true; el0.classList.add('ev--recibido'); disparo = -10; }
-    else { disparo = -1; }   /* el bucle toca Next en el siguiente cuadro */
-    el0.classList.toggle('ev--paso', n >= 1);
+    recibido = true; el0.classList.add('ev--recibido'); disparo = -10;
+    el0.classList.toggle('ev--paso', true);
     dibujar(reloj);
   }
 
@@ -220,8 +218,16 @@
             </div>
           </div>
 
+          <div class="ev__carril ev__carril--estado">
+            <p class="ev__rot" data-anim="izquierda" style="--retraso:380ms"><span class="ev__tipo">Estado</span><code>@Published nearestPOI</code><small>Un flujo que se observa</small></p>
+            <div class="ev__via" data-anim="aparecer" style="--retraso:300ms">
+              ${nodo('s-de', 'GPS', '$nearestPOI')}
+              ${nodo('s-a', 'Guía virtual', 'VirtualGuideModuleInterface')}
+            </div>
+          </div>
+
           <div class="ev__carril ev__carril--evento">
-            <p class="ev__rot" data-anim="izquierda" style="--retraso:380ms"><span class="ev__tipo">Evento</span><code>.nextPOIRequested</code><small>Un aviso, dos oyentes</small></p>
+            <p class="ev__rot" data-anim="izquierda" style="--retraso:510ms"><span class="ev__tipo">Evento</span><code>.nextPOIRequested</code><small>Un aviso, dos oyentes</small></p>
             <div class="ev__via ev__via--abanico" data-anim="aparecer" style="--retraso:420ms">
               <span class="ev__nodo ev__nodo--ar" data-n="e-de">
                 <span class="ev__next" aria-hidden="true">${Iconos.svg('forward.end.fill')}</span>
@@ -232,14 +238,6 @@
                 <span class="ev__nodo ev__nodo--oyente" data-n="e-gps"><b>GPS<span class="ev__accion" data-paso="1">: avanza la ruta</span></b><code data-paso="1">advanceToNextPOI()</code></span>
                 <span class="ev__nodo ev__nodo--oyente" data-n="e-guia"><b>Guía<span class="ev__accion" data-paso="1">: limpia la cola</span></b><code data-paso="1">clearQueueAndStop()</code></span>
               </span>
-            </div>
-          </div>
-
-          <div class="ev__carril ev__carril--estado">
-            <p class="ev__rot" data-anim="izquierda" style="--retraso:510ms"><span class="ev__tipo">Estado</span><code>@Published nearestPOI</code><small>Un flujo que se observa</small></p>
-            <div class="ev__via" data-anim="aparecer" style="--retraso:300ms">
-              ${nodo('s-de', 'GPS', '$nearestPOI')}
-              ${nodo('s-a', 'Guía virtual', 'VirtualGuideModuleInterface')}
             </div>
           </div>
         </div>

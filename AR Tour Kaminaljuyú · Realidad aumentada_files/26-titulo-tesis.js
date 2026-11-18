@@ -14,7 +14,7 @@
             <p class="cifra" aria-hidden="true" style="margin:0;line-height:1;font-size:5rem">01</p>
           </div>
           <p class="lead" data-anim="subir" style="--retraso:280ms;max-width:62ch;font-size:var(--t-2);color:var(--texto);margin-top:var(--e-3)">Implementación de arquitectura modular para la integración de componentes y gestión multilenguaje en una aplicación de realidad aumentada desarrollada en iOS, utilizando Swift y frameworks nativos para el Parque Arqueológico Kaminaljuyú.</p>
-          ${Deck.fuente('Universidad del Valle de Guatemala · Trabajo de graduación')}
+          <p class="tarjeta__d" data-anim="subir" style="--retraso:420ms;margin-top:var(--e-2);position:relative;z-index:2">Universidad del Valle de Guatemala · Trabajo de graduación</p>
         </div>
       </div>
     `

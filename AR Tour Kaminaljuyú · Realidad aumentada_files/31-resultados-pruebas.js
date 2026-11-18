@@ -14,7 +14,9 @@
       '<p class="etiqueta" style="color:var(' + colorVar + ')">' + etiqueta + '</p>' +
       '<div class="fila" style="gap:.5em;margin-top:var(--e-2)">' + pills + '</div></div>';
   }
-  function pill(nombre, n) { return Motivos.rotulo(n, nombre); }
+  function pill(nombre, n) {
+    return '<span class="rotulo" style="font-size:1.25rem;padding:.5em .85em"><b>' + n + '</b> ' + nombre + '</span>';
+  }
 
   Presentacion.diapositiva({
     id: 'resultados-pruebas',
@@ -37,7 +39,7 @@
           ${panel('Lenguaje · 13 pruebas', '--oro-tema',
             pill('Textos', 6) + pill('Idioma', 4) + pill('Videos', 3), 530)}
         </div>
-        ${Deck.fuente('Solo 125 de 7 616 líneas son núcleo compartido · 52 textos y 16 videos por idioma · XCTest y Swift Testing en Xcode.')}
+        <p class="tarjeta__d" data-anim="subir" style="--retraso:600ms;margin-top:var(--e-3);position:relative;z-index:2">Solo 125 de 7 616 líneas son núcleo compartido · 52 textos y 16 videos por idioma · XCTest y Swift Testing en Xcode.</p>
       </div>
     `
   });

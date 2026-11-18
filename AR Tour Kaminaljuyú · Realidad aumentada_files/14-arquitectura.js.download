@@ -1,5 +1,6 @@
 /* 14 · Arquitectura — ink. Diagrama de cajas en tres capas (App, núcleo compartido, módulos
-   funcionales), con color por capa y relieve 3D (box-shadow escalonado), tema oscuro. */
+   funcionales), con color por capa y relieve 3D. Cajas de solo nombre (sin descripción) y
+   flechas visuales entre capas, para que se lea como diagrama y no como tarjetas de texto. */
 (function () {
   function sombra3d(colorVar, fuerte) {
     var a = fuerte ? 55 : 45, b = fuerte ? 28 : 22, d1 = fuerte ? 5 : 3, d2 = fuerte ? 10 : 6;
@@ -7,20 +8,25 @@
       d2 + 'px ' + d2 + 'px 0 0 color-mix(in srgb,var(' + colorVar + ') ' + b + '%,transparent)';
   }
 
-  function banda(etiqueta, nota, colorVar, piezas, retraso) {
-    var items = piezas.map(function (p) {
-      var pcls = 'tarjeta' + (p.oro ? ' tarjeta--oro' : '');
-      return '<div class="' + pcls + '" style="flex:1 1 170px;padding:var(--e-1) var(--e-2);' + sombra3d(p.oro ? '--oro-tema' : colorVar, false) + '">' +
-        '<p class="tarjeta__t" style="font-size:var(--t-lead);line-height:1.15">' + p.t + '</p>' +
-        (p.d ? '<p class="tarjeta__d" style="font-size:var(--t-chico)">' + p.d + '</p>' : '') +
+  function flecha(texto) {
+    return '<div style="display:flex;flex-direction:column;align-items:center;gap:.15em;margin:.3em 0">' +
+      '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--texto-2)"><path d="M12 4v15M6 13l6 6 6-6"></path></svg>' +
+      (texto ? '<span class="tarjeta__d" style="font-family:var(--f-mono)">' + texto + '</span>' : '') +
+    '</div>';
+  }
+
+  function banda(etiqueta, colorVar, nombres, oros, retraso) {
+    var items = nombres.map(function (n, i) {
+      var esOro = oros && oros.indexOf(i) !== -1;
+      var pcls = 'tarjeta' + (esOro ? ' tarjeta--oro' : '');
+      return '<div class="' + pcls + '" style="flex:1 1 130px;padding:var(--e-2);text-align:center;' + sombra3d(esOro ? '--oro-tema' : colorVar, false) + '">' +
+        '<p class="tarjeta__t" style="font-size:var(--t-lead);margin:0">' + n + '</p>' +
       '</div>';
     }).join('');
-    return '<div data-anim="subir" style="--retraso:' + retraso + 'ms;width:100%;padding:var(--e-1) var(--e-3);border-radius:var(--r-3);margin-bottom:var(--e-1);' +
+    return '<div data-anim="subir" style="--retraso:' + retraso + 'ms;width:100%;padding:var(--e-2) var(--e-3);border-radius:var(--r-3);' +
         'background:color-mix(in srgb,var(' + colorVar + ') 20%,var(--fondo));' +
         'border:1px solid color-mix(in srgb,var(' + colorVar + ') 45%,transparent);' + sombra3d(colorVar, true) + '">' +
-      '<p class="etiqueta" style="display:flex;gap:.6em;flex-wrap:wrap;align-items:baseline;color:var(' + colorVar + ')">' + etiqueta +
-        (nota ? '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--texto-2)">' + nota + '</span>' : '') +
-      '</p>' +
+      '<p class="etiqueta" style="color:var(' + colorVar + ')">' + etiqueta + '</p>' +
       '<div class="fila" style="gap:var(--e-2);margin-top:var(--e-2)">' + items + '</div>' +
     '</div>';
   }
@@ -35,24 +41,11 @@
       <div class="lienzo">
         ${Deck.cabeza('Arquitectura', 'Arquitectura en tres capas.', { sm: true })}
         <div style="margin-top:var(--e-2);width:100%">
-          ${banda('1 · App', '· arranca y muestra las pantallas', '--app', [
-            { t: 'Punto de entrada' },
-            { t: 'Contenedor de dependencias', d: 'inyecta los módulos' },
-            { t: 'Navegación' },
-            { t: 'Pantallas e interfaz' }
-          ], 250)}
-          <p aria-hidden="true" style="text-align:center;margin:.15em 0;font-family:var(--f-mono);font-size:var(--t-etiqueta);color:var(--texto-2)">↓ reúne e inyecta</p>
-          ${banda('2 · Núcleo compartido', '· 1.6% del código', '--oro-tema', [
-            { t: 'Bus de eventos', d: 'avisos entre módulos', oro: true },
-            { t: 'Estado del recorrido', d: 'no iniciado · en curso · terminado', oro: true }
-          ], 420)}
-          <p aria-hidden="true" style="text-align:center;margin:.15em 0;font-family:var(--f-mono);font-size:var(--t-etiqueta);color:var(--texto-2)">↓ reúne e inyecta · ↑ los módulos lo usan</p>
-          ${banda('3 · Módulos funcionales', '· interfaz pública', '--resuelto', [
-            { t: 'GPS', d: 'CoreLocation · Maps' },
-            { t: 'Realidad aumentada', d: 'ARKit · SceneKit' },
-            { t: 'Guía virtual', d: 'AVFoundation' },
-            { t: 'Lenguaje', d: 'sistema propio en Swift', oro: true }
-          ], 590)}
+          ${banda('1 · App', '--app', ['Punto de entrada', 'Contenedor de dependencias', 'Navegación', 'Pantallas e interfaz'], [], 250)}
+          ${flecha('reúne e inyecta')}
+          ${banda('2 · Núcleo compartido', '--oro-tema', ['Bus de eventos', 'Estado del recorrido'], [0, 1], 420)}
+          ${flecha('los módulos lo usan')}
+          ${banda('3 · Módulos funcionales', '--resuelto', ['GPS', 'Realidad aumentada', 'Guía virtual', 'Lenguaje'], [3], 590)}
         </div>
       </div>
     `

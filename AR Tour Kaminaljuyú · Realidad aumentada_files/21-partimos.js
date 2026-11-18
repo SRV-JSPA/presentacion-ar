@@ -6,8 +6,11 @@
   }
   function modulo(t, d, colorVar, retraso) {
     var cls = 'tarjeta' + (colorVar === '--oro-tema' ? ' tarjeta--oro' : '');
-    return '<div class="' + cls + '" data-anim="subir" style="--retraso:' + retraso + 'ms;flex:1 1 130px;padding:var(--e-2);' + sombra3d(colorVar, false) + '">' +
-      '<p class="tarjeta__t" style="font-size:var(--t-lead)">' + t + '</p><p class="tarjeta__d">' + d + '</p></div>';
+    return '<div class="' + cls + '" data-anim="subir" style="--retraso:' + retraso + 'ms;flex:1 1 170px;padding:var(--e-2);' + sombra3d(colorVar, false) + '">' +
+      '<p class="tarjeta__t">' + t + '</p><p class="tarjeta__d">' + d + '</p></div>';
+  }
+  function chip(t) {
+    return '<span class="rotulo" style="font-size:1.25rem;padding:.5em .85em">' + t + '</span>';
   }
   Presentacion.diapositiva({
     id: 'partimos',
@@ -23,7 +26,7 @@
             ${Motivos.rotulo('ANTES', '', 'rotulo--app')}
             <p class="tarjeta__t" style="margin-top:var(--e-2)">Un solo componente lo hacía casi todo</p>
             <div class="fila" style="gap:var(--e-1);margin-top:var(--e-2)">
-              ${['Estado del recorrido','Ruta','Proximidad','Cálculos geográficos','Modelos 3D','Flecha de dirección','Interfaz'].map(function (t) { return Motivos.rotulo(t); }).join('')}
+              ${['Estado del recorrido','Ruta','Proximidad','Cálculos geográficos','Modelos 3D','Flecha de dirección','Interfaz'].map(chip).join('')}
             </div>
             <p class="tarjeta__d" style="margin-top:var(--e-3)">Sin cambio de idioma · difícil trabajar <b>en paralelo</b></p>
           </div>

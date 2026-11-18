@@ -16,7 +16,7 @@
           <div class="tarjeta" data-anim="subir" style="--retraso:500ms;flex:1 1 200px"><span class="esquinas" aria-hidden="true"><i></i><i></i><i></i><i></i></span><p class="tarjeta__t">Guía virtual</p><p class="tarjeta__d">Videos y subtítulos</p></div>
           <div class="tarjeta tarjeta--oro" data-anim="subir" style="--retraso:600ms;flex:1 1 200px"><span class="esquinas esquinas--mira" aria-hidden="true"><i></i><i></i><i></i><i></i></span><p class="tarjeta__t">Lenguaje</p><p class="tarjeta__d">Español e inglés</p></div>
         </div>
-        ${Deck.fuente('Lenguaje · GPS · Realidad aumentada · Guía virtual. Cada integrante del equipo desarrolló uno, en paralelo.')}
+        <p class="tarjeta__d" data-anim="subir" style="--retraso:720ms;margin-top:var(--e-3);max-width:60ch;position:relative;z-index:2">Lenguaje · GPS · Realidad aumentada · Guía virtual. Cada integrante del equipo desarrolló uno, en paralelo.</p>
       </div>
     `
   });
