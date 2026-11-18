@@ -9,7 +9,7 @@
   }
   function tile(pct, media, texto, v, retraso, oro) {
     return '<div class="tarjeta' + (oro ? ' tarjeta--oro' : '') + '" data-anim="subir" style="--retraso:' + retraso + 'ms;flex:1 1 150px;padding:var(--e-2) var(--e-3);' + sombra3d(v, oro) + '">' +
-      '<p class="cifra" style="font-size:2.3rem;margin:0;color:var(' + v + ')">' + pct + '</p>' +
+      '<p class="cifra" style="font-size:2.5rem;margin:0;color:var(' + v + ')">' + pct + '</p>' +
       '<p class="tarjeta__d" style="margin-top:.2em">' + texto + '</p>' +
       '<p class="mono" style="font-size:var(--t-etiqueta);color:var(--texto-mute);margin-top:.4em">media ' + media + ' / 5</p></div>';
   }

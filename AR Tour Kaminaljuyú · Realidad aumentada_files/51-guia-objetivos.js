@@ -15,7 +15,7 @@
       <div class="lienzo">
         ${Deck.cabeza('Objetivos', 'Un guía que se ve, se escucha y aparece solo.')}
         <div class="fila" data-anim-grupo="subir" data-intervalo="90" style="margin-top:var(--e-4);gap:var(--e-3);align-items:stretch">
-          ${t('Integrar', 'El guía maya dentro de la app iOS con realidad aumentada.', 280)}
+          ${t('Integrar', 'El guía dentro de la app iOS con realidad aumentada.', 280)}
           ${t('Narrar', 'Narración pregrabada sincronizada con el guía.', 360)}
           ${t('Animar', 'Gestos y estados sincronizados con la voz.', 440)}
           ${t('Activar', 'Se reproduce solo al acercarse a cada punto.', 520)}

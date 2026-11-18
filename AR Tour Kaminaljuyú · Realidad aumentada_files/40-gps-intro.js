@@ -15,7 +15,7 @@
         <div class="pila">
           <div data-anim="subir" style="--retraso:0ms;position:relative;display:inline-block;padding:.4em 1.1em">
             ${Motivos.esquinas()}
-            <p class="cifra" aria-hidden="true" style="margin:0;line-height:1;font-size:5rem">02</p>
+            <p class="cifra" aria-hidden="true" style="margin:0;line-height:1;font-size:5.4rem">02</p>
           </div>
           <p class="lead" data-anim="subir" style="--retraso:280ms;max-width:62ch;font-size:var(--t-2);color:var(--texto);margin-top:var(--e-3)">Implementación de un módulo de localización en tiempo real con detección de proximidad en iOS implementando Swift y librerías de Google para el Parque Arqueológico Kaminaljuyú.</p>
           <p class="tarjeta__d" data-anim="aparecer" style="--retraso:900ms;position:relative;z-index:2;font-size:1.4rem;font-weight:700">Universidad del Valle de Guatemala · Trabajo de graduación</p>

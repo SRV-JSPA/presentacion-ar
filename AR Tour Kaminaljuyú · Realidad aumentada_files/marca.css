@@ -62,14 +62,16 @@
   --u:min(1vw,1.78vh);
 
   /* Escala tipográfica (todo en u, con mínimos legibles) */
+  /* Escala ampliada para proyección: todo el deck queda al tamaño del
+     módulo GPS (diapositiva 21), para que la letra se lea en la sala. */
   --t-xl:calc(var(--u)*6.6);
-  --t-1:calc(var(--u)*4.4);
-  --t-2:calc(var(--u)*3.1);
-  --t-3:calc(var(--u)*2.05);
-  --t-lead:max(16px,calc(var(--u)*1.4));
-  --t-texto:max(15px,calc(var(--u)*1.12));
-  --t-chico:max(13px,calc(var(--u)*.92));
-  --t-etiqueta:max(12px,calc(var(--u)*.74));
+  --t-1:calc(var(--u)*5.32);
+  --t-2:calc(var(--u)*3.82);
+  --t-3:calc(var(--u)*2.70);
+  --t-lead:max(25px,calc(var(--u)*2.16));
+  --t-texto:max(23px,calc(var(--u)*1.80));
+  --t-chico:max(21px,calc(var(--u)*1.54));
+  --t-etiqueta:max(20px,calc(var(--u)*1.26));
   --t-cifra:calc(var(--u)*8.2);
 
   /* Espaciado */
@@ -135,7 +137,7 @@
 .texto--mute{color:var(--texto-mute)}
 .mono{font-family:var(--f-mono);font-feature-settings:"zero" 0;letter-spacing:.01em}
 .etiqueta{display:inline-flex;align-items:center;gap:.9em;font-family:var(--f-mono);
-  font-size:var(--t-etiqueta);font-weight:500;letter-spacing:.16em;text-transform:uppercase;
+  font-size:max(22px, calc(var(--u) * 1.55));font-weight:500;letter-spacing:.16em;text-transform:uppercase;
   color:var(--texto-mute);line-height:1.2;margin:0}
 /* El punto de la etiqueta es un nodo de levantamiento: oro con su anillo */
 .etiqueta--punto::before{content:'';width:.62em;height:.62em;border-radius:50%;flex:none;
